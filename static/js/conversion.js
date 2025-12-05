@@ -190,13 +190,13 @@ function showConversionResult(resultData) {
       const youtubeUrl = resultData.youtube_url || `https://www.youtube.com/watch?v=${videoId}`;
       const thumbnailUrl = resultData.thumbnail_url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
       
-      const embedUrlNoCookie = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&modestbranding=1&rel=0&controls=1&iv_load_policy=3&cc_load_policy=0&fs=1&playsinline=1&enablejsapi=1`;
-      const embedUrlStandard = `https://www.youtube.com/embed/${videoId}?autoplay=0&modestbranding=1&rel=0&controls=1&iv_load_policy=3&cc_load_policy=0&fs=1&playsinline=1&enablejsapi=1`;
+      const embedUrlNoCookie = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&modestbranding=1&rel=0&controls=1&iv_load_policy=3&cc_load_policy=0&fs=1&playsinline=1&enablejsapi=1&origin=${window.location.origin}`;
+      const embedUrlStandard = `https://www.youtube.com/embed/${videoId}?autoplay=0&modestbranding=1&rel=0&controls=1&iv_load_policy=3&cc_load_policy=0&fs=1&playsinline=1&enablejsapi=1&origin=${window.location.origin}`;
       
       html = `<div class="video-player-container" style="position:relative; width:100%; padding-bottom:56.25%; background:#000; border-radius:0.5rem; overflow:hidden; border:1px solid #374151;">`;
-      html += `<iframe id="youtube-player-${videoId}" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" src="${embedUrlNoCookie}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
+      html += `<iframe id="youtube-player-${videoId}" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; opacity:0;" src="${embedUrlNoCookie}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
       
-      html += `<div id="youtube-fallback-${videoId}" style="position:absolute; top:0; left:0; width:100%; height:100%; display:none; cursor:pointer; background:#000;" onclick="window.open('${youtubeUrl}', '_blank');">`;
+      html += `<div id="youtube-fallback-${videoId}" style="position:absolute; top:0; left:0; width:100%; height:100%; display:block; cursor:pointer; background:#000;" onclick="window.open('${youtubeUrl}', '_blank');">`;
       html += `<img src="${thumbnailUrl}" alt="Video thumbnail" style="width:100%; max-height:400px; height:auto; object-fit:cover;" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg';" />`;
       html += `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:68px; height:48px; pointer-events:none;">`;
       html += `<svg width="68" height="48" viewBox="0 0 68 48"><path d="M66.52,7.74c-0.78-2.93-2.49-5.41-5.42-6.19C55.79,.13,34,0,34,0S12.21,.13,6.9,1.55 C3.97,2.33,2.27,4.81,1.48,7.74C0.06,13.05,0,24,0,24s0.06,10.95,1.48,16.26c0.78,2.93,2.49,5.41,5.42,6.19 C12.21,47.87,34,48,34,48s21.79-0.13,27.1-1.55c2.93-0.78,4.63-3.26,5.42-6.19C67.94,34.95,68,24,68,24S67.94,13.05,66.52,7.74z" fill="#f00"></path><path d="M 45,24 27,14 27,34" fill="#fff"></path></svg>`;
@@ -211,37 +211,146 @@ function showConversionResult(resultData) {
         html += `</div>`;
       }
       
-      setTimeout(function() {
-        const iframe = document.getElementById('youtube-player-${videoId}');
-        const fallback = document.getElementById('youtube-fallback-${videoId}');
-        if (!iframe) return;
-        
-        iframe.addEventListener('load', function() {
-          setTimeout(function() {
+      (function(vidId, embedStd, ytUrl) {
+        setTimeout(function() {
+          const iframe = document.getElementById(`youtube-player-${vidId}`);
+          const fallback = document.getElementById(`youtube-fallback-${vidId}`);
+          if (!iframe) return;
+          
+          let hasError = false;
+          let triedStandard = false;
+          
+          const showFallback = function() {
+            if (hasError) return;
+            hasError = true;
+            iframe.style.display = 'none';
+            if (fallback) fallback.style.display = 'block';
+          };
+          
+          const tryStandardEmbed = function() {
+            if (triedStandard || hasError) return;
+            triedStandard = true;
+            if (iframe.src.includes('youtube-nocookie.com')) {
+              iframe.src = embedStd;
+            } else {
+              showFallback();
+            }
+          };
+          
+          const checkForError = function() {
+            if (hasError) return true;
+            
+            const title = iframe.getAttribute('title') || '';
+            if (title.toLowerCase().includes('error') || title.toLowerCase().includes('153') || title.toLowerCase().includes('configuration')) {
+              tryStandardEmbed();
+              return true;
+            }
+            
+            const rect = iframe.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(iframe);
+            
+            if (rect.height === 0 || rect.width === 0 || 
+                computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
+              tryStandardEmbed();
+              return true;
+            }
+            
+            if (rect.height < 50 && rect.width < 50) {
+              tryStandardEmbed();
+              return true;
+            }
+            
+            return false;
+          };
+          
+          iframe.addEventListener('load', function() {
+            setTimeout(function() {
+              if (checkForError()) {
+                setTimeout(function() {
+                  if (!hasError && checkForError()) {
+                    showFallback();
+                  }
+                }, 1000);
+              }
+            }, 1500);
+          });
+          
+          iframe.addEventListener('error', function() {
+            tryStandardEmbed();
+          });
+          
+          const messageHandler = function(event) {
+            if (event.origin !== 'https://www.youtube.com' && event.origin !== 'https://www.youtube-nocookie.com') {
+              return;
+            }
             try {
-              const rect = iframe.getBoundingClientRect();
-              if (rect.height === 0 || rect.width === 0) {
-                if (iframe.src.includes('youtube-nocookie.com')) {
-                  iframe.src = '${embedUrlStandard}';
-                } else {
-                  iframe.style.display = 'none';
-                  if (fallback) fallback.style.display = 'block';
-                }
+              const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+              if (data && (data.event === 'error' || data.errorCode === 153 || 
+                  (data.info && data.info.videoData && data.info.videoData.errorCode === 153) ||
+                  (data.error && (data.error === 153 || data.error.code === 153)))) {
+                tryStandardEmbed();
+                setTimeout(function() {
+                  if (!hasError) showFallback();
+                }, 500);
+                window.removeEventListener('message', messageHandler);
               }
             } catch(e) {
             }
-          }, 2000);
-        });
-        
-        iframe.addEventListener('error', function() {
-          if (iframe.src.includes('youtube-nocookie.com')) {
-            iframe.src = '${embedUrlStandard}';
-          } else {
-            iframe.style.display = 'none';
-            if (fallback) fallback.style.display = 'block';
-          }
-        });
-      }, 100);
+          };
+          window.addEventListener('message', messageHandler);
+          
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              if (mutation.type === 'attributes' && mutation.attributeName === 'title') {
+                const title = iframe.getAttribute('title') || '';
+                if (title.toLowerCase().includes('error') || title.toLowerCase().includes('153') || title.toLowerCase().includes('configuration')) {
+                  tryStandardEmbed();
+                  setTimeout(function() {
+                    if (!hasError) showFallback();
+                  }, 500);
+                }
+              }
+            });
+          });
+          observer.observe(iframe, { attributes: true, attributeFilter: ['title'] });
+          
+          setTimeout(function() {
+            if (checkForError()) {
+              setTimeout(function() {
+                if (!hasError && checkForError()) {
+                  showFallback();
+                }
+              }, 1000);
+            } else {
+              setTimeout(function() {
+                if (!hasError) {
+                  const title = iframe.getAttribute('title') || '';
+                  if (title.toLowerCase().includes('error') || title.toLowerCase().includes('153') || title.toLowerCase().includes('configuration')) {
+                    showFallback();
+                  }
+                }
+              }, 2500);
+            }
+          }, 1500);
+          
+          let errorCheckCount = 0;
+          const maxErrorChecks = 8;
+          const errorCheckInterval = setInterval(function() {
+            errorCheckCount++;
+            if (errorCheckCount > maxErrorChecks || hasError) {
+              clearInterval(errorCheckInterval);
+              observer.disconnect();
+              return;
+            }
+            
+            if (checkForError()) {
+              setTimeout(function() {
+                if (!hasError) showFallback();
+              }, 500);
+            }
+          }, 800);
+        }, 100);
+      })(videoId, embedUrlStandard, youtubeUrl);
     } 
     else if (resultData.type === 'tiktok') {
       if (resultData.thumbnail_url && resultData.thumbnail_url.trim()) {
