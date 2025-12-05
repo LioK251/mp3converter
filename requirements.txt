@@ -1,13 +1,13 @@
-Flask==3.0.3
-flask-limiter==3.8.0
-flask-wtf==1.2.1
-Werkzeug==3.0.4
-yt-dlp==2025.12.0
-torch==2.5.1
-pretty-midi==0.2.10
-requests==2.32.3
-flask-talisman==1.1.0
-pywebview==5.0.0
+Flask
+flask-limiter
+flask-wtf
+Werkzeug
+yt-dlp
+torch
+pretty-midi
+requests
+flask-talisman
+pywebview
 
 # Note: For RTX 50xx series GPUs, install PyTorch, torchvision, and torchaudio separately with CUDA 12.9 support:
 # pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
