@@ -69,7 +69,6 @@ def main():
     
     print("Server started! Opening window...")
     
-    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'icon.ico')
     window = webview.create_window(
         'MP3 → MIDI CONVERTER',
         'http://127.0.0.1:5000/',
@@ -80,7 +79,6 @@ def main():
         fullscreen=False,
         on_top=ENABLE_TOPMOST,
         text_select=True,
-        icon=icon_path if os.path.exists(icon_path) else None,
     )
     
     def set_window_topmost():
