@@ -1054,11 +1054,24 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
                 "library": output_library,
             }
             conversion_tasks[task_id] = {"status": "completed"}
+            
+            if os.path.exists(mp3_path):
+                try:
+                    os.remove(mp3_path)
+                    logger.debug(f"Deleted downloaded MP3 file: {mp3_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete downloaded MP3 file {mp3_path}: {e}")
 
         except Exception as e:
             logger.error(f"Conversion task error: {str(e)}")
             if conversion_tasks.get(task_id, {}).get("status") != "cancelled":
                 conversion_tasks[task_id] = {"status": "error", "error": str(e)}
+            if 'mp3_path' in locals() and os.path.exists(mp3_path):
+                try:
+                    os.remove(mp3_path)
+                    logger.debug(f"Deleted downloaded MP3 file after error: {mp3_path}")
+                except Exception as del_e:
+                    logger.warning(f"Failed to delete downloaded MP3 file {mp3_path} after error: {del_e}")
 
 @csrf.exempt
 @app.route("/api/health", methods=["GET"])
