@@ -15,8 +15,8 @@ A powerful web application for converting MP3 audio files to MIDI format using T
 - 🎯 **Async Processing**: Non-blocking conversions for better user experience
 - 🔄 **CUDA/CPU Toggle**: Switch between GPU (CUDA) and CPU processing with a simple toggle switch
 - 🌐 **Auto-Browser Launch**: Automatically opens your browser when starting the application
-![Converter Page](templates\converter.webp)
-![History Page](templates\converter.webp)
+![Converter Page](templates\converter.png)
+![History Page](templates\history.png)
 
 ## 📋 Requirements
 
