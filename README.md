@@ -1,4 +1,4 @@
-# 🎵 Audio Converter Web
+# 🎵 MP3 → MIDI CONVERTER
 
 A powerful web application for converting MP3 audio files to MIDI format using Transkun, with support for YouTube, TikTok, and Discord CDN link downloads. The application also includes a QWERTY sheet converter for MIDI files, allowing you to play music directly on your keyboard.
 
