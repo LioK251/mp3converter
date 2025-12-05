@@ -57,7 +57,7 @@ Ensure Transkun is installed and accessible from your command line:
 transkun --version
 ```
 
-If not installed, follow the [Transkun installation guide](https://github.com/your-transkun-repo).
+If not installed, follow the [Transkun installation guide]([https://github.com/your-transkun-repo](https://github.com/Yujia-Yan/Transkun?tab=readme-ov-file)).
 
 ### Step 4: Install FFmpeg
 
