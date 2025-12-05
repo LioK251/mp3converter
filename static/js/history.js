@@ -125,12 +125,11 @@ function createHistoryItemHTML(item) {
     html += '</div>';
   }
   
-  html += '<div class="flex items-center justify-between text-xs text-gray-400">';
+  html += '<div class="mt-auto pt-2">';
+  html += '<div class="flex items-center justify-between text-xs text-gray-400 mb-2">';
   html += `<span>Model: ${item.library || '—'}</span>`;
   html += `<span>Time: ${item.conversion_time || '—'}s</span>`;
   html += '</div>';
-  
-  html += '<div class="mt-auto pt-2">';
   if (item.midi_name) {
     const downloadUrl = item.download_url || `/converted/${item.midi_name}`;
     html += `<a class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect" href="${downloadUrl}" download>`;
