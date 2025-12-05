@@ -14,6 +14,8 @@ A powerful web application for converting MP3 audio files to MIDI format using T
 - 💾 **Download Management**: Easy download of MIDI and sheet files
 - 🎯 **Async Processing**: Non-blocking conversions for better user experience
 - 🔄 **CUDA/CPU Toggle**: Switch between GPU (CUDA) and CPU processing with a simple toggle switch
+- 🎵 **Multi-Transpose Mode**: Automatic region-based transposition for pieces with key changes
+- 📋 **Copy Transposes**: Quickly copy transpose values for use in other tools
 - 🌐 **Auto-Browser Launch**: Automatically opens your browser when starting the application
 ![Converter Page](templates/converter.png)
 ![History Page](templates/history.png)
@@ -209,6 +211,29 @@ Before converting, you can choose your processing device:
 - Or click "Download Sheets" to download the text file
 - Customize conversion settings using the "Settings" button
 
+#### 4. 🎹 Transpose Modes
+
+The application supports two transpose modes for MIDI to QWERTY sheet conversion:
+
+**Auto Transpose Mode (Default):**
+- Applies a single optimal transposition to the entire piece
+- Shows "Transpose by: X" at the beginning of the sheet
+- Best for pieces that stay in one key
+
+**Multi Transpose Mode:**
+- Automatically finds optimal transpositions for different regions (separated by line breaks)
+- Each region can have its own transposition value
+- Shows "Transpose by: X" at the start of each region
+- Displays the distance from the previous transpose in parentheses, e.g., "Transpose by: +2 (+4)"
+- Skips duplicate transpose values (only shows when the value changes)
+- Includes a "Copy Transposes" button to copy all transpose values to clipboard (space-separated)
+- Best for pieces with key changes or wide pitch ranges
+
+**To switch modes:**
+- Click the "Transpose Mode" toggle button in the sheet viewer
+- The mode preference is saved in your browser's local storage
+- The sheet automatically refreshes when you change modes
+
 ### 🎛️ QWERTY Sheet Settings
 
 Access settings via the "Settings" button to customize:
@@ -220,6 +245,7 @@ Access settings via the "Settings" button to customize:
 - **Chord Ordering**: Classic or custom chord ordering
 - **Visual Markers**: Tempo marks, out-of-range indicators, BPM changes
 - **Auto Transpose**: Automatically transpose to optimal key
+- **Multi Transpose**: Enable multi-transpose mode (can also be toggled in the sheet viewer)
 
 ## ⚙️ Configuration
 

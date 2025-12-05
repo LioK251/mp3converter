@@ -678,9 +678,11 @@
     <div id="view-tempo-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
       <div id="tempo-modal-content" class="bg-gray-800 rounded-lg p-0.5 max-w-[95vw] w-full mx-2 max-h-[95vh] overflow-hidden border border-gray-700 shadow-xl flex flex-col relative">
         <div id="tempo-modal-buttons" class="absolute top-0 right-0 z-[100] flex items-center gap-2 pr-1 pt-1" style="pointer-events: auto;">
+          <button id="transpose-mode-toggle" class="text-gray-400 hover:text-white text-xs px-2 py-1 rounded" style="background: transparent; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto; border: none;" title="Toggle between Auto and Multi transpose mode">Transpose Mode: Auto</button>
+          <button id="copy-transposes-btn" class="text-gray-400 hover:text-white text-xs hidden" style="background: transparent; border: none; padding: 0; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: none; align-items: center; justify-content: center; pointer-events: auto;">Copy Transposes</button>
           <button id="copy-tempo-text" class="text-gray-400 hover:text-white text-xs" style="background: transparent; border: none; padding: 0; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;">Copy</button>
           <button id="fullscreen-tempo-modal" class="text-gray-400 hover:text-white text-sm" style="background: transparent; border: none; padding: 0; cursor: pointer; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;" title="Fullscreen">⛶</button>
-          <button id="close-tempo-modal" class="text-gray-400 hover:text-white text-xl" style="background: transparent; border: none; padding: 0; cursor: pointer; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;">&times;</button>
+          <button id="close-tempo-modal" class="text-gray-400 hover:text-white text-xl" style="background: transparent; border: none; padding: 0; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;">X;</button>
         </div>
         
         <div id="tempo-text-content" class="flex-1 overflow-auto hide-scrollbar bg-gray-900 rounded p-1 font-mono text-sm text-gray-200 border border-gray-700 leading-relaxed" style="white-space: pre; word-wrap: normal; overflow-wrap: normal;">
@@ -736,6 +738,8 @@
         console.log('Sending request to convert:', midiFilename);
         
         const savedSettings = loadSheetsSettings();
+        const currentTransposeMode = localStorage.getItem('transposeMode') || 'auto';
+        savedSettings.multi_transpose = currentTransposeMode === 'multi';
         
         fetch('/api/convert-to-sheets', {
           method: 'POST',
@@ -1599,11 +1603,14 @@
         
         if (!modal || !content) return;
         
+        currentMidiFilename = midiFilename;
         modal.classList.remove('hidden');
         content.innerHTML = '<div class="text-center text-gray-400">Loading sheet text...</div>';
         
         try {
           const savedSettings = loadSheetsSettings();
+          const currentTransposeMode = localStorage.getItem('transposeMode') || 'auto';
+          savedSettings.multi_transpose = currentTransposeMode === 'multi';
           
           const response = await fetch('/api/convert-to-sheets', {
             method: 'POST',
@@ -1630,6 +1637,9 @@
           if (data.success && data.sheet_text !== undefined && data.sheet_text !== null) {
             const coloredText = colorizeTempoText(data.sheet_text);
             content.innerHTML = coloredText;
+            if (typeof updateTransposeModeButton === 'function') {
+              updateTransposeModeButton();
+            }
           } else {
             console.error('Missing sheet_text or success flag. Response:', data);
             throw new Error(data.error || 'Failed to load sheet text');
@@ -1664,15 +1674,84 @@
           if (content) {
             const text = content.textContent;
             navigator.clipboard.writeText(text).then(() => {
-              const originalText = copyTempoTextBtn.textContent;
-              copyTempoTextBtn.textContent = 'Copied!';
-              setTimeout(() => {
-                copyTempoTextBtn.textContent = originalText || 'Copy';
-              }, 2000);
             }).catch(err => {
               console.error('Failed to copy:', err);
               alert('Failed to copy text to clipboard');
             });
+          }
+        });
+      }
+
+      const transposeModeToggle = document.getElementById('transpose-mode-toggle');
+      const copyTransposesBtn = document.getElementById('copy-transposes-btn');
+      let transposeMode = localStorage.getItem('transposeMode') || 'auto';
+      let currentMidiFilename = null;
+      
+      if (copyTransposesBtn) {
+        if (transposeMode === 'multi') {
+          copyTransposesBtn.classList.remove('hidden');
+          copyTransposesBtn.style.display = 'flex';
+        } else {
+          copyTransposesBtn.classList.add('hidden');
+          copyTransposesBtn.style.display = 'none';
+        }
+      }
+      
+      function updateTransposeModeButton() {
+        if (transposeModeToggle) {
+          transposeModeToggle.textContent = `Transpose Mode: ${transposeMode === 'multi' ? 'Multi' : 'Auto'}`;
+        }
+        if (copyTransposesBtn) {
+          if (transposeMode === 'multi') {
+            copyTransposesBtn.classList.remove('hidden');
+            copyTransposesBtn.style.display = 'flex';
+          } else {
+            copyTransposesBtn.classList.add('hidden');
+            copyTransposesBtn.style.display = 'none';
+          }
+        }
+      }
+      
+      if (transposeModeToggle) {
+        updateTransposeModeButton();
+        transposeModeToggle.addEventListener('click', () => {
+          transposeMode = transposeMode === 'auto' ? 'multi' : 'auto';
+          localStorage.setItem('transposeMode', transposeMode);
+          updateTransposeModeButton();
+          
+          if (currentMidiFilename) {
+            const modal = document.getElementById('view-tempo-modal');
+            if (modal && !modal.classList.contains('hidden')) {
+              viewTempoText(currentMidiFilename);
+            }
+          }
+        });
+      }
+      
+      if (copyTransposesBtn) {
+        copyTransposesBtn.addEventListener('click', () => {
+          const content = document.getElementById('tempo-text-content');
+          if (content) {
+            const text = content.textContent || content.innerText;
+            const transposeRegex = /Transpose by:\s*([+-]?\d+)/g;
+            const transposes = [];
+            let match;
+            
+            while ((match = transposeRegex.exec(text)) !== null) {
+              const value = parseInt(match[1], 10);
+              transposes.push(value);
+            }
+            
+            if (transposes.length > 0) {
+              const transposeString = transposes.map(t => t >= 0 ? t.toString() : t.toString()).join(' ');
+              navigator.clipboard.writeText(transposeString).then(() => {
+              }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy transposes to clipboard');
+              });
+            } else {
+              alert('No transpose values found');
+            }
           }
         });
       }

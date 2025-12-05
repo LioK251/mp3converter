@@ -9,7 +9,7 @@ VP_SCALE = (
     'asSdDfgGhHjJklL' +
     'zZxcCvVbBnm' +
     'yuiopasdfghj'
-)
+) 
 
 FIRST_POSSIBLE_NOTE = 21
 LAST_POSSIBLE_NOTE = 108
@@ -70,6 +70,7 @@ def convert_midi_to_sheets(midi_file_path: str, output_file_path: str, settings:
         'out_of_range_separator': ':',
         'show_bpm_changes_as_comments': True,
         'auto_transpose': True,
+        'multi_transpose': False,
     }
     
     final_settings = {**defaults, **settings}
@@ -95,14 +96,14 @@ def convert_midi_to_sheets(midi_file_path: str, output_file_path: str, settings:
     all_notes.sort(key=lambda x: (x['start'], x['pitch']))
     
     applied_transpose = 0
+    region_transpositions = []
     
-    if final_settings.get('auto_transpose', False):
-        def score_transposition(transpose_by):
+    def score_transposition(transpose_by, notes_to_score):
             valid_notes = 0
             lowercase_notes = 0
             uppercase_notes = 0
             
-            for note in all_notes:
+            for note in notes_to_score:
                 transposed_pitch = note['pitch'] + transpose_by
                 if 21 <= transposed_pitch <= 108:
                     valid_notes += 1
@@ -114,18 +115,120 @@ def convert_midi_to_sheets(midi_file_path: str, output_file_path: str, settings:
                             lowercase_notes += 1
             
             return (valid_notes * 2) + lowercase_notes - uppercase_notes
-        
-        best_transpose = 0
-        best_score = score_transposition(0)
-        
-        for transpose_by in range(-12, 13):
-            score = score_transposition(transpose_by)
-            if score > best_score + final_settings.get('resilience', 2):
-                best_score = score
-                best_transpose = transpose_by
-        
-        applied_transpose = best_transpose
-        if best_transpose != 0:
+    
+    if final_settings.get('auto_transpose', False):
+        if final_settings.get('multi_transpose', False):
+            tempo_changes_temp = midi_data.get_tempo_changes()
+            if len(tempo_changes_temp[1]) == 0:
+                default_tempo_temp = 120.0
+                tempo_map_temp = [(0.0, 120.0)]
+            else:
+                default_tempo_temp = tempo_changes_temp[1][0]
+                tempo_map_temp = list(zip(tempo_changes_temp[0], tempo_changes_temp[1]))
+            
+            def get_tempo_at_time(time):
+                current_tempo = default_tempo_temp
+                for tempo_time, tempo in tempo_map_temp:
+                    if tempo_time <= time:
+                        current_tempo = tempo
+                    else:
+                        break
+                return current_tempo
+            
+            quantize_seconds_temp = final_settings['quantize'] / 1000.0
+            chords_temp = []
+            current_chord_temp = []
+            last_start_time_temp = None
+            
+            for note in all_notes:
+                if last_start_time_temp is None:
+                    last_start_time_temp = note['start']
+                    current_chord_temp = [note]
+                else:
+                    time_diff = note['start'] - last_start_time_temp
+                    if time_diff < quantize_seconds_temp:
+                        current_chord_temp.append(note)
+                    else:
+                        if current_chord_temp:
+                            chords_temp.append(current_chord_temp)
+                        current_chord_temp = [note]
+                        last_start_time_temp = note['start']
+            
+            if current_chord_temp:
+                chords_temp.append(current_chord_temp)
+            
+            beats_per_line = final_settings['break_lines_every']
+            regions = []
+            current_region_start = 0
+            beats_accumulated = 0.0
+            
+            for i, chord in enumerate(chords_temp):
+                if i < len(chords_temp) - 1:
+                    next_chord = chords_temp[i + 1]
+                    if next_chord:
+                        chord_start = chord[0]['start']
+                        time_diff = next_chord[0]['start'] - chord_start
+                        current_tempo = get_tempo_at_time(chord_start)
+                        beats_per_second = current_tempo / 60.0
+                        seconds_per_beat = 1.0 / beats_per_second
+                        beats_passed = time_diff / seconds_per_beat
+                        beats_accumulated += beats_passed
+                        
+                        if beats_accumulated >= beats_per_line:
+                            regions.append((current_region_start, i + 1))
+                            current_region_start = i + 1
+                            beats_accumulated = 0.0
+            
+            if current_region_start < len(chords_temp):
+                regions.append((current_region_start, len(chords_temp)))
+            
+            if not regions:
+                regions = [(0, len(chords_temp))]
+            
+            previous_transpose = 0
+            transpose_index = 1
+            
+            for region_start, region_end in regions:
+                region_notes = []
+                for i in range(region_start, region_end):
+                    if i < len(chords_temp):
+                        region_notes.extend(chords_temp[i])
+                
+                if not region_notes:
+                    continue
+                
+                best_transpose = previous_transpose
+                best_score = score_transposition(previous_transpose, region_notes)
+                
+                for transpose_by in range(-12, 13):
+                    score = score_transposition(transpose_by, region_notes)
+                    if score > best_score + final_settings.get('resilience', 2):
+                        best_score = score
+                        best_transpose = transpose_by
+                
+                for note in region_notes:
+                    new_pitch = note['pitch'] + best_transpose
+                    note['pitch'] = max(21, min(108, new_pitch))
+                
+                region_transpositions.append({
+                    'transpose': best_transpose,
+                    'index': transpose_index,
+                    'start_chord': region_start
+                })
+                transpose_index += 1
+                
+                previous_transpose = best_transpose
+        else:
+            best_transpose = 0
+            best_score = score_transposition(0, all_notes)
+            
+            for transpose_by in range(-12, 13):
+                score = score_transposition(transpose_by, all_notes)
+                if score > best_score + final_settings.get('resilience', 2):
+                    best_score = score
+                    best_transpose = transpose_by
+            
+            applied_transpose = best_transpose
             for note in all_notes:
                 new_pitch = note['pitch'] + best_transpose
                 note['pitch'] = max(21, min(108, new_pitch))
@@ -175,6 +278,7 @@ def convert_midi_to_sheets(midi_file_path: str, output_file_path: str, settings:
     beats_per_line = final_settings['break_lines_every']
     
     last_tempo = None
+    chord_index = 0
     
     for i, chord in enumerate(chords):
         if not chord:
@@ -194,15 +298,15 @@ def convert_midi_to_sheets(midi_file_path: str, output_file_path: str, settings:
                     faster = current_tempo > last_tempo
                     comment = f"<!-- {int(tempo_change_pct)}% {'faster' if faster else 'slower'} - BPM changed to {int(current_tempo)} -->"
                     if current_line:
-                        sheet_lines.append("".join(current_line).rstrip())
+                        sheet_lines.append(("".join(current_line).rstrip(), chord_index))
                         current_line = []
-                    sheet_lines.append(comment)
+                    sheet_lines.append((comment, chord_index))
             if last_tempo is None:
                 comment = f"<!-- Tempo: {int(current_tempo)} BPM -->"
                 if current_line:
-                    sheet_lines.append("".join(current_line).rstrip())
+                    sheet_lines.append(("".join(current_line).rstrip(), chord_index))
                     current_line = []
-                sheet_lines.append(comment)
+                sheet_lines.append((comment, chord_index))
             last_tempo = current_tempo
         
         is_quantized = len(chord) > 1 and any(
@@ -330,6 +434,9 @@ def convert_midi_to_sheets(midi_file_path: str, output_file_path: str, settings:
             chord_str += " "
         
         current_line.append(chord_str)
+        chord_index += 1
+        
+        line_break_occurred = False
         
         if final_settings['break_lines_how'] == 'manually':
             if i < len(chords) - 1:
@@ -340,13 +447,15 @@ def convert_midi_to_sheets(midi_file_path: str, output_file_path: str, settings:
                     beats_accumulated += beats_passed
                     
                     if beats_accumulated >= beats_per_line:
-                        sheet_lines.append("".join(current_line).rstrip())
+                        sheet_lines.append(("".join(current_line).rstrip(), chord_index))
                         current_line = []
                         beats_accumulated = 0.0
+                        line_break_occurred = True
             else:
                 if current_line:
-                    sheet_lines.append("".join(current_line).rstrip())
+                    sheet_lines.append(("".join(current_line).rstrip(), chord_index))
                     current_line = []
+                    line_break_occurred = True
         else:
             if i < len(chords) - 1:
                 next_chord = chords[i + 1]
@@ -356,20 +465,71 @@ def convert_midi_to_sheets(midi_file_path: str, output_file_path: str, settings:
                     beats_accumulated += beats_passed
                     
                     if beats_accumulated >= 4.0:
-                        sheet_lines.append("".join(current_line).rstrip())
+                        sheet_lines.append(("".join(current_line).rstrip(), chord_index))
                         current_line = []
                         beats_accumulated = 0.0
+                        line_break_occurred = True
     
     if current_line:
-        sheet_lines.append("".join(current_line).rstrip())
+        sheet_lines.append(("".join(current_line).rstrip(), chord_index))
     
     output_lines = []
-    if applied_transpose != 0:
+    
+    if final_settings.get('multi_transpose', False) and region_transpositions:
+        transpose_index_map = {}
+        for rt in region_transpositions:
+            transpose_index_map[rt['start_chord']] = rt
+        
+        final_output_lines = []
+        previous_chord_index = 0
+        last_transpose_value = None
+        
+        for line_data in sheet_lines:
+            if isinstance(line_data, tuple):
+                line, current_chord_idx = line_data
+            else:
+                line = line_data
+                current_chord_idx = previous_chord_index + 1
+            
+            if line.strip().startswith('<!--'):
+                final_output_lines.append(line)
+                continue
+            
+            if previous_chord_index in transpose_index_map:
+                rt = transpose_index_map[previous_chord_index]
+                display_transpose = -rt['transpose']
+                
+                if last_transpose_value is None or display_transpose != last_transpose_value:
+                    transpose_text = f"Transpose by: {display_transpose}"
+                    
+                    if last_transpose_value is not None:
+                        distance = display_transpose - last_transpose_value
+                        transpose_text += f" ({distance:+d})"
+                    
+                    final_output_lines.append(transpose_text)
+                    last_transpose_value = display_transpose
+            
+            final_output_lines.append(line)
+            previous_chord_index = current_chord_idx
+        
+        if 0 in transpose_index_map and not any(isinstance(line, str) and line.strip().startswith('Transpose by:') for line in final_output_lines[:5]):
+            rt = transpose_index_map[0]
+            display_transpose = -rt['transpose']
+            transpose_text = f"Transpose by: {display_transpose}"
+            output_lines.append(transpose_text)
+            output_lines.append("")
+        
+        output_lines.extend(final_output_lines)
+    else:
         display_transpose = -applied_transpose
         output_lines.append(f"Transpose by: {display_transpose}")
         output_lines.append("")
-    
-    output_lines.extend(sheet_lines)
+        
+        for line_data in sheet_lines:
+            if isinstance(line_data, tuple):
+                output_lines.append(line_data[0])
+            else:
+                output_lines.append(line_data)
     
     output_text = "\n".join(output_lines)
     with open(output_file_path, 'w', encoding='utf-8') as f:
