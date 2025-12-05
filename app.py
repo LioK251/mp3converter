@@ -1560,6 +1560,40 @@ def api_history():
         return jsonify({"error": str(e)}), 500
 
 @csrf.exempt
+@app.route("/api/history/delete", methods=["POST"])
+@limiter.limit("30/minute")
+def api_delete_history():
+    try:
+        data = request.get_json()
+        timestamp = data.get("timestamp")
+        
+        if timestamp is None:
+            return jsonify({"error": "Timestamp is required"}), 400
+        
+        ensure_history_file()
+        try:
+            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                history = json.load(f)
+                if not isinstance(history, list):
+                    history = []
+        except Exception:
+            history = []
+        
+        original_length = len(history)
+        history = [item for item in history if abs(item.get("timestamp", 0) - float(timestamp)) > 0.001]
+        
+        if len(history) == original_length:
+            return jsonify({"error": "History item not found"}), 404
+        
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({"status": "success", "message": "History item deleted"})
+    except Exception as e:
+        logger.error(f"API delete history error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@csrf.exempt
 @app.route("/api/convert-to-sheets", methods=["POST"])
 def api_convert_to_sheets():
     try:
