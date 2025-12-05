@@ -508,7 +508,6 @@ def download_mp3_from_tiktok(tiktok_url: str, output_dir: str,
 
     outtmpl = os.path.join(output_dir, '%(title)s.%(ext)s')
     
-    proxy_url = 'socks5://cgQLkH:6naH62@138.122.195.72:8000'
     ydl_opts: dict = {
         'format': 'bestaudio/best',
         'outtmpl': outtmpl,
@@ -527,23 +526,12 @@ def download_mp3_from_tiktok(tiktok_url: str, output_dir: str,
     if cookiefile:
         ydl_opts['cookiefile'] = cookiefile
 
-    try:
-        ydl_opts['proxy'] = proxy_url
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(tiktok_url, download=True)
-            if info_dict is None:
-                raise ValueError('Download failed')
-            prepared = ydl.prepare_filename(info_dict)
-            src_mp3 = os.path.splitext(prepared)[0] + '.mp3'
-    except Exception as proxy_error:
-        logger.warning(f'TikTok download with proxy failed: {proxy_error}. Trying without proxy...')
-        ydl_opts.pop('proxy', None)
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(tiktok_url, download=True)
-            if info_dict is None:
-                raise ValueError('Download failed')
-            prepared = ydl.prepare_filename(info_dict)
-            src_mp3 = os.path.splitext(prepared)[0] + '.mp3'
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(tiktok_url, download=True)
+        if info_dict is None:
+            raise ValueError('Download failed')
+        prepared = ydl.prepare_filename(info_dict)
+        src_mp3 = os.path.splitext(prepared)[0] + '.mp3'
 
     if custom_name:
         sanitized = sanitize_filename(custom_name)
@@ -1568,4 +1556,3 @@ def serve_history_json():
 
 if __name__ == "__main__":
     app.run(host='127.0.0.1', port=5000)
-
