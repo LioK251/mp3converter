@@ -1,19 +1,20 @@
 # 🎵 Audio Converter Web
 
-A powerful web application for converting MP3 audio files to MIDI format using Transkun, with support for YouTube and TikTok video downloads. The application also includes a QWERTY sheet converter for MIDI files, allowing you to play music directly on your keyboard.
+A powerful web application for converting MP3 audio files to MIDI format using Transkun, with support for YouTube, TikTok, and Discord CDN link downloads. The application also includes a QWERTY sheet converter for MIDI files, allowing you to play music directly on your keyboard.
 
 ## ✨ Features
 
 - 🎹 **MP3 to MIDI Conversion**: Convert MP3 audio files to MIDI format using Transkun
-- 📺 **YouTube & TikTok Support**: Download and convert audio directly from YouTube and TikTok videos
+- 📺 **Multi-Platform Support**: Download and convert audio directly from YouTube, TikTok, and Discord CDN links
 - ⌨️ **QWERTY Sheet Converter**: Convert MIDI files to QWERTY keyboard sheet notation for easy playing
 - 🎨 **Modern Web Interface**: Beautiful, responsive UI with real-time progress tracking
-- 📜 **Conversion History**: Track all your conversions with thumbnails and metadata
+- 📜 **Conversion History**: Track all your conversions with thumbnails and metadata, with delete functionality
 - ⚙️ **Customizable Settings**: Fine-tune QWERTY sheet conversion parameters
 - 🚀 **Real-time Progress**: Monitor conversion progress with visual indicators
 - 💾 **Download Management**: Easy download of MIDI and sheet files
 - 🎯 **Async Processing**: Non-blocking conversions for better user experience
 - 🔄 **CUDA/CPU Toggle**: Switch between GPU (CUDA) and CPU processing with a simple toggle switch
+- 🌐 **Auto-Browser Launch**: Automatically opens your browser when starting the application
 
 ## 📋 Requirements
 
@@ -82,7 +83,9 @@ If not installed, follow the [Transkun installation guide](https://github.com/Yu
 
 ### Step 4: Configure YouTube Cookies (Optional but Recommended)
 
-For downloading restricted or age-restricted videos, you need to add your YouTube cookies to `cookies.txt`:
+**Note:** Cookies are only used for YouTube downloads. TikTok and Discord downloads do not require cookies.
+
+For downloading restricted or age-restricted YouTube videos, you need to add your YouTube cookies to `cookies.txt`:
 
 1. **Install a browser extension** to export cookies:
    - Chrome/Edge: [get NETSCAPE cookies by export](https://chromewebstore.google.com/detail/hlkenndednhfkekhgcdicdfddnkalmdm?utm_source=item-share-cb)
@@ -151,7 +154,7 @@ Run the Flask application:
 python app.py
 ```
 
-The application will start on `http://127.0.0.1:5000`
+The application will start on `http://127.0.0.1:5000` and automatically open in your default browser.
 
 #### Option 2: GUI Application
 
@@ -182,16 +185,21 @@ Before converting, you can choose your processing device:
 - Wait for the conversion to complete
 - Download your MIDI file
 
-#### 2. 🔗 Convert from YouTube/TikTok
+#### 2. 🔗 Convert from YouTube/TikTok/Discord
 
 - Select your preferred device (CPU or CUDA) using the toggle switch
-- Paste a YouTube or TikTok URL in the input field
+- Paste a YouTube, TikTok, or Discord CDN link in the input field
 - Click "Convert Link"
 - The application will:
-  - Download the video audio
+  - Download the video/audio file
   - Convert it to MIDI format using your selected device
-  - Display a preview with thumbnail
+  - Display a preview with thumbnail (if available)
   - Provide download links
+
+**Supported URL formats:**
+- YouTube: `https://www.youtube.com/watch?v=...` or `https://youtu.be/...`
+- TikTok: `https://www.tiktok.com/...` or `https://vm.tiktok.com/...`
+- Discord: `https://cdn.discordapp.com/attachments/...` or `https://media.discordapp.net/attachments/...`
 
 #### 3. ⌨️ Convert MIDI to QWERTY Sheets
 
@@ -238,12 +246,15 @@ python app.py
 
 ```
 audioconverter-web/
-├── app.py                 # Main Flask application
+├── app.py                 # Main Flask application (auto-opens browser)
 ├── app_gui.py            # GUI wrapper using pywebview
 ├── midi_to_sheets.py     # MIDI to QWERTY sheet converter
 ├── requirements.txt      # Python dependencies
+├── cookies.txt          # YouTube cookies file (optional)
 ├── templates/
-│   └── index.html       # Web interface
+│   ├── index.html       # Web interface
+│   ├── icon.ico         # Application icon
+│   └── notfound.jpg     # Placeholder image
 ├── uploads/             # Uploaded files directory
 ├── converted/           # Converted files directory
 ├── transkun/           # Transkun transcription module
@@ -259,9 +270,10 @@ The application provides a RESTful API for programmatic access:
 - `GET /` - Main web interface
 
 ### Conversion Endpoints
-- `POST /api/convert` - Start video conversion (YouTube/TikTok)
+- `POST /api/convert` - Start video/audio conversion (YouTube/TikTok/Discord)
   - Request body: `{"media_url": "https://...", "device": "cuda" | "cpu" | null}`
   - `device` parameter (optional): Specify "cuda" for GPU or "cpu" for CPU processing. If omitted or null, automatically selects based on CUDA availability.
+  - Supported URLs: YouTube, TikTok, and Discord CDN links
   - Returns: `{"task_id": "...", "status": "queued"}`
 
 - `GET /api/status/<task_id>` - Check conversion status
@@ -277,6 +289,10 @@ The application provides a RESTful API for programmatic access:
 ### History & Health
 - `GET /api/history` - Get conversion history
   - Query params: `limit` (default: 10)
+
+- `POST /api/history/delete` - Delete a history item
+  - Request body: `{"timestamp": <float>}`
+  - Returns: `{"status": "success", "message": "History item deleted"}`
 
 - `GET /api/health` - Health check endpoint
 
@@ -297,6 +313,11 @@ curl -X POST http://127.0.0.1:5000/api/convert \
 curl -X POST http://127.0.0.1:5000/api/convert \
   -H "Content-Type: application/json" \
   -d '{"media_url": "https://www.youtube.com/watch?v=...", "device": "cuda"}'
+
+# Convert from Discord CDN link
+curl -X POST http://127.0.0.1:5000/api/convert \
+  -H "Content-Type: application/json" \
+  -d '{"media_url": "https://cdn.discordapp.com/attachments/...", "device": "cuda"}'
 
 # Check status
 curl http://127.0.0.1:5000/api/status/<task_id>
@@ -334,11 +355,12 @@ curl -X POST http://127.0.0.1:5000/api/convert-to-sheets \
 - Check your system resources (CPU/GPU usage)
 - Try converting smaller audio segments
 
-#### ❌ "Download failed" (YouTube/TikTok)
+#### ❌ "Download failed" (YouTube/TikTok/Discord)
 - Check your internet connection
 - Verify the URL is correct and accessible
 - Some videos may have restrictions
-- Try using a cookies file (place `cookies.txt` in project root)
+- For YouTube: Try using a cookies file (place `cookies.txt` in project root)
+- For Discord: Ensure the CDN link is valid and not expired
 
 ### Performance Tips
 
