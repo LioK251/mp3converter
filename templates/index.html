@@ -356,7 +356,7 @@
 
           <form method="post" class="space-y-4 mt-4" id="url-upload-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="text" name="media_url" placeholder="Paste YouTube/TikTok link"
+            <input type="text" name="media_url" placeholder="Paste YouTube/TikTok/Discord link"
                    class="block w-full p-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 placeholder-gray-400 hover-effect"/>
             <input type="hidden" name="conversion_library" id="conversion-library-hidden-youtube" value="transkun" />
             <input type="hidden" name="device" id="device-input-youtube" value="cuda" />
@@ -413,6 +413,8 @@
                         <span class="px-2 py-0.5 text-[10px] rounded-full bg-red-600/30 text-red-300 border border-red-700">YouTube</span>
                       {% elif item.type == 'tiktok' %}
                         <span class="px-2 py-0.5 text-[10px] rounded-full bg-purple-600/30 text-purple-200 border border-purple-700">TikTok</span>
+                      {% elif item.type == 'discord' %}
+                        <span class="px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">Discord</span>
                       {% else %}
                         <span class="px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">MP3</span>
                       {% endif %}
@@ -461,6 +463,26 @@
                         <div class="text-gray-300" title="{{ item.video_title }}">
                           <a class="underline hover-effect" href="{{ item.tiktok_url }}" target="_blank" rel="noopener">
                             {{ item.video_title or item.tiktok_url }}
+                          </a>
+                        </div>
+                    
+                      {% elif item.type == 'discord' %}
+                        {% if item.thumbnail_url and item.thumbnail_url.strip() %}
+                          <a href="{{ item.discord_url }}" target="_blank" rel="noopener" class="block hover-effect">
+                            <img src="{{ item.thumbnail_url }}"
+                                alt="thumb"
+                                loading="lazy"
+                                style="width:100%; max-height: 180px; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" 
+                                onerror="this.onerror=null; this.src='/templates/notfound.jpg'; this.style.borderRadius='0.5rem';" />
+                          </a>
+                        {% else %}
+                          <div class="block hover-effect">
+                            <img src="/templates/notfound.jpg" alt="thumb" loading="lazy" class="w-full rounded-lg border border-gray-700" style="max-height: 180px; object-fit: cover;" />
+                          </div>
+                        {% endif %}
+                        <div class="text-gray-300" title="{{ item.video_title }}">
+                          <a class="underline hover-effect" href="{{ item.discord_url }}" target="_blank" rel="noopener">
+                            {{ item.video_title or item.discord_url }}
                           </a>
                         </div>
                     
@@ -969,6 +991,17 @@
               html += `</div>`;
             }
           }
+          else if (resultData.type === 'discord') {
+            if (resultData.thumbnail_url && resultData.thumbnail_url.trim()) {
+            html = `<a href="${resultData.discord_url || '#'}" target="_blank" rel="noopener" class="block hover-effect">`;
+              html += `<img src="${resultData.thumbnail_url}" alt="Video thumbnail" style="width:100%; max-height:400px; height:auto; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" onerror="this.onerror=null; this.src='/templates/notfound.jpg';" />`;
+            html += `</a>`;
+            } else {
+              html = `<div class="block hover-effect">`;
+              html += `<img src="/templates/notfound.jpg" alt="Video thumbnail" style="width:100%; max-height:400px; height:auto; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" />`;
+              html += `</div>`;
+            }
+          }
           
           if (resultData.download_url && resultData.midi_name) {
             html += `<div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">`;
@@ -1024,6 +1057,7 @@
             thumbnail_url: resultData.thumbnail_url,
             youtube_url: resultData.youtube_url,
             tiktok_url: resultData.tiktok_url,
+            discord_url: resultData.discord_url,
             midi_name: resultData.midi_name,
             download_url: resultData.download_url,
             conversion_time: resultData.conversion_time,
@@ -1062,6 +1096,8 @@
           html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-red-600/30 text-red-300 border border-red-700">YouTube</span>';
         } else if (item.type === 'tiktok') {
           html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-purple-600/30 text-purple-200 border border-purple-700">TikTok</span>';
+        } else if (item.type === 'discord') {
+          html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">Discord</span>';
         } else {
           html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">MP3</span>';
         }
@@ -1103,6 +1139,20 @@
           }
           html += `<div class="text-gray-300" title="${item.video_title || ''}">`;
           html += `<a class="underline hover-effect" href="${item.tiktok_url || '#'}" target="_blank" rel="noopener">${item.video_title || item.tiktok_url || ''}</a>`;
+          html += '</div>';
+        }
+        else if (item.type === 'discord') {
+          if (item.thumbnail_url && item.thumbnail_url.trim()) {
+            html += `<a href="${item.discord_url || '#'}" target="_blank" rel="noopener" class="block hover-effect">`;
+            html += `<img src="${item.thumbnail_url}" alt="thumb" loading="lazy" style="width:100%; max-height: 180px; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" onerror="this.onerror=null; this.src='/templates/notfound.jpg'; this.style.borderRadius='0.5rem';" />`;
+            html += '</a>';
+          } else {
+            html += '<div class="block hover-effect">';
+            html += '<img src="/templates/notfound.jpg" alt="thumb" loading="lazy" class="w-full rounded-lg border border-gray-700" style="max-height: 180px; object-fit: cover;" />';
+            html += '</div>';
+          }
+          html += `<div class="text-gray-300" title="${item.video_title || ''}">`;
+          html += `<a class="underline hover-effect" href="${item.discord_url || '#'}" target="_blank" rel="noopener">${item.video_title || item.discord_url || ''}</a>`;
           html += '</div>';
         }
         else {

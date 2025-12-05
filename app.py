@@ -205,6 +205,7 @@ def prepare_history_for_ui(items: list[dict]):
             "type": it.get("type"),
             "youtube_url": it.get("youtube_url"),
             "tiktok_url": it.get("tiktok_url"),
+            "discord_url": it.get("discord_url"),
             "thumbnail_url": it.get("thumbnail_url"),
             "video_id": it.get("video_id"),
             "video_title": it.get("video_title"),
@@ -244,11 +245,20 @@ def is_valid_tiktok_url(url: str) -> bool:
     )
     return bool(pattern.search(url))
 
+def is_valid_discord_url(url: str) -> bool:
+    pattern = re.compile(
+        r'^https?://(cdn|media)\.discordapp\.(com|net)/attachments/',
+        re.IGNORECASE
+    )
+    return bool(pattern.search(url))
+
 def detect_source(url: str) -> str | None:
     if is_valid_youtube_url(url):
         return 'youtube'
     if is_valid_tiktok_url(url):
         return 'tiktok'
+    if is_valid_discord_url(url):
+        return 'discord'
     return None
 
 def is_allowed_thumbnail_url(url: str) -> bool:
@@ -554,6 +564,62 @@ def download_mp3_from_tiktok(tiktok_url: str, output_dir: str,
     video_title = info_dict.get('title', 'video')
     raw_thumb = info_dict.get("thumbnail", "")
     thumbnail_url = save_thumbnail_locally(raw_thumb, "tiktok") if raw_thumb else None
+    return dest_path, video_title, thumbnail_url
+
+def download_mp3_from_discord(discord_url: str, output_dir: str,
+                              custom_name: str | None = None,
+                              cookiefile: str | None = None) -> tuple[str, str, str]:
+    if not is_valid_discord_url(discord_url):
+        raise ValueError("Invalid Discord URL")
+
+    outtmpl = os.path.join(output_dir, '%(title)s.%(ext)s')
+    
+    ydl_opts: dict = {
+        'format': 'bestaudio/best',
+        'outtmpl': outtmpl,
+        'restrictfilenames': True,
+        'noplaylist': True,
+        'quiet': False,
+        'no_warnings': True,
+        'ignoreerrors': True,
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '320',
+        }],
+    }
+
+    if cookiefile:
+        ydl_opts['cookiefile'] = cookiefile
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(discord_url, download=True)
+        if info_dict is None:
+            raise ValueError('Download failed')
+        prepared = ydl.prepare_filename(info_dict)
+        src_mp3 = os.path.splitext(prepared)[0] + '.mp3'
+
+    if custom_name:
+        sanitized = sanitize_filename(custom_name)
+        target_name = (sanitized or 'video') + '.mp3'
+    else:
+        title = info_dict.get('title') or 'discord_audio'
+        sanitized_title = sanitize_filename(title)
+        target_name = (sanitized_title or 'discord_audio') + '.mp3'
+
+    dest_path = os.path.join(output_dir, target_name)
+    dest_path = get_unique_filepath(dest_path)
+
+    if not os.path.exists(src_mp3):
+        raise FileNotFoundError('MP3 file not found after download')
+
+    shutil.move(src_mp3, dest_path)
+    if not os.path.exists(dest_path):
+        raise FileNotFoundError('Failed to move MP3 to destination')
+
+    video_title = info_dict.get('title', 'discord_audio')
+    raw_thumb = info_dict.get("thumbnail", "")
+    thumbnail_url = save_thumbnail_locally(raw_thumb, "discord") if raw_thumb else None
     return dest_path, video_title, thumbnail_url
 
 
@@ -1007,20 +1073,20 @@ def upload_file():
         elif "media_url" in request.form:
             url = request.form["media_url"].strip()
             if not url:
-                flash("Please enter a valid YouTube or TikTok URL")
+                flash("Please enter a valid YouTube, TikTok, or Discord URL")
                 return render_with_history()
 
             source = detect_source(url)
             if source is None:
-                flash("Invalid URL format. Please enter a valid YouTube or TikTok URL")
+                flash("Invalid URL format. Please enter a valid YouTube, TikTok, or Discord URL")
                 return render_with_history()
 
             video_id = None
             video_title = None
             thumbnail_url = ''
-            cookiefile = "cookies.txt" if os.path.exists("cookies.txt") else None
             try:
                 if source == 'youtube':
+                    cookiefile = "cookies.txt" if os.path.exists("cookies.txt") else None
                     m = re.search(r"(?:v=|youtu\.be/)([\w-]{11})", url)
                     if m:
                         video_id = m.group(1)
@@ -1030,12 +1096,19 @@ def upload_file():
                         custom_name=None,
                         cookiefile=cookiefile, 
                     )
-                else:
+                elif source == 'tiktok':
                     mp3_path, video_title, thumbnail_url = download_mp3_from_tiktok(
                         tiktok_url=url,
                         output_dir=app.config["UPLOAD_FOLDER"],
                         custom_name=None,
-                        cookiefile=cookiefile,
+                        cookiefile=None,
+                    )
+                elif source == 'discord':
+                    mp3_path, video_title, thumbnail_url = download_mp3_from_discord(
+                        discord_url=url,
+                        output_dir=app.config["UPLOAD_FOLDER"],
+                        custom_name=None,
+                        cookiefile=None,
                     )
                 if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
                     flash("MP3 file was not downloaded successfully.")
@@ -1060,6 +1133,7 @@ def upload_file():
                         "type": source,
                         "youtube_url": url if source=='youtube' else None,
                         "tiktok_url": url if source=='tiktok' else None,
+                        "discord_url": url if source=='discord' else None,
                         "video_id": video_id,
                         "video_title": video_title,
                         "thumbnail_url": thumbnail_url,
@@ -1075,7 +1149,7 @@ def upload_file():
                     is_converting = False
 
             except yt_dlp.DownloadError as e:
-                logger.error(f"YouTube/TikTok download error: {str(e)}")
+                logger.error(f"YouTube/TikTok/Discord download error: {str(e)}")
                 flash(f"Download failed: {str(e)}")
             except yt_dlp.utils.ExtractorError as e:
                 logger.error(f"Extractor error: {str(e)}")
@@ -1230,7 +1304,6 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
             video_id = None
             video_title = None
             thumbnail_url = ''
-            cookiefile = "cookies.txt" if os.path.exists("cookies.txt") else None
 
             conversion_tasks[task_id] = {"status": "processing", "progress": "Downloading video..."}
             
@@ -1241,6 +1314,7 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
             active_threads[task_id] = stop_event
             
             if source == 'youtube':
+                cookiefile = "cookies.txt" if os.path.exists("cookies.txt") else None
                 m = re.search(r"(?:v=|youtu\.be/)([\w-]{11})", url)
                 if m:
                     video_id = m.group(1)
@@ -1250,12 +1324,19 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
                     custom_name=None,
                     cookiefile=cookiefile,
                 )
-            else:
+            elif source == 'tiktok':
                 mp3_path, video_title, thumbnail_url = download_mp3_from_tiktok(
                     tiktok_url=url,
                     output_dir=app.config["UPLOAD_FOLDER"],
                     custom_name=None,
-                    cookiefile=cookiefile,
+                    cookiefile=None,
+                )
+            elif source == 'discord':
+                mp3_path, video_title, thumbnail_url = download_mp3_from_discord(
+                    discord_url=url,
+                    output_dir=app.config["UPLOAD_FOLDER"],
+                    custom_name=None,
+                    cookiefile=None,
                 )
 
             if conversion_tasks.get(task_id, {}).get("status") == "cancelled":
@@ -1328,6 +1409,7 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
                 "type": source,
                 "youtube_url": url if source == 'youtube' else None,
                 "tiktok_url": url if source == 'tiktok' else None,
+                "discord_url": url if source == 'discord' else None,
                 "video_id": video_id,
                 "video_title": video_title,
                 "thumbnail_url": thumbnail_url,
@@ -1384,7 +1466,7 @@ def api_convert():
 
         source = detect_source(url)
         if source is None:
-            return jsonify({"error": "Invalid URL format. Please enter a valid YouTube or TikTok URL"}), 400
+            return jsonify({"error": "Invalid URL format. Please enter a valid YouTube, TikTok, or Discord URL"}), 400
 
         device = data.get("device", None)
         if device not in ["cuda", "cpu"]:
@@ -1424,6 +1506,7 @@ def api_status(task_id):
             "type": result.get("type"),
             "youtube_url": result.get("youtube_url"),
             "tiktok_url": result.get("tiktok_url"),
+            "discord_url": result.get("discord_url"),
             "library": result.get("library"),
         })
     elif task_status.get("status") == "error":
@@ -1556,3 +1639,4 @@ def serve_history_json():
 
 if __name__ == "__main__":
     app.run(host='127.0.0.1', port=5000)
+
