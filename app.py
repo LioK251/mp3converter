@@ -1672,5 +1672,10 @@ def serve_history_json():
     return response
 
 if __name__ == "__main__":
+    def open_browser():
+        time.sleep(1.5)
+        webbrowser.open('http://127.0.0.1:5000/')
+    
+    Timer(1.5, open_browser).start()
     app.run(host='127.0.0.1', port=5000)
 
