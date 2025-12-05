@@ -290,7 +290,7 @@ This project is open source and available under the MIT License.
 ## 🙏 Credits
 
 - 🎹 **QWERTY Sheet Converter**: Based on [midi-converter](https://github.com/ArijanJ/midi-converter) by [@ArijanJ](https://github.com/ArijanJ) and [@Albacusphetical](https://github.com/Albacusphetical)
-- 🎵 **Transkun**: For audio-to-MIDI transcription
+- 🎵 **Transkun**: For [audio-to-MIDI transcription](https://github.com/Yujia-Yan/Transkun?tab=readme-ov-file)
 - 🎨 **UI Framework**: Built with Flask, Tailwind CSS, and modern web technologies
 
 ## 🤝 Contributing
