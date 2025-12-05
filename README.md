@@ -274,7 +274,7 @@ python app.py
 
 ```
 audioconverter-web/
-├── app.py                 # Main Flask application (auto-opens browser)
+├── app.py                 # Main Flask application
 ├── app_gui.py            # GUI wrapper using pywebview
 ├── midi_to_sheets.py     # MIDI to QWERTY sheet converter
 ├── requirements.txt      # Python dependencies
@@ -283,14 +283,16 @@ audioconverter-web/
 │   ├── __init__.py
 │   └── system_info.py   # System information detection (CPU/GPU)
 ├── static/              # Static assets
-│   └── js/              # JavaScript modules
-│       ├── device.js
-│       ├── settings.js
-│       ├── sheets-utils.js
-│       ├── history.js
-│       ├── conversion.js
-│       ├── sheets-viewer.js
-│       └── ui.js
+│   └── js/              # JavaScript modules (modularized)
+│       ├── device.js           # Device toggle (CUDA/CPU)
+│       ├── settings.js         # Settings modal management
+│       ├── sheets-utils.js     # Sheet utility functions
+│       ├── history.js          # History management
+│       ├── conversion.js       # Conversion logic
+│       ├── sheets-viewer.js    # Sheet viewer modal
+│       └── ui.js               # UI interactions (tabs)
+│   └── css/              # Website styles
+│       ├── style.css           # Main style
 ├── templates/
 │   ├── index.html       # Web interface
 │   ├── icon.ico         # Application icon

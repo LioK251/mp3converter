@@ -1,6 +1,5 @@
 import pretty_midi
-import os
-from typing import Dict, List, Tuple
+from typing import Dict
 
 VP_SCALE = (
     '1234567890qwert' +
