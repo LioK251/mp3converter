@@ -19,10 +19,10 @@ A powerful web application for converting MP3 audio files to MIDI format using T
 
 ### System Requirements
 
-- **Python**: 3.8 or higher
+- **Python**: [3.10.0](https://www.python.org/downloads/release/python-3100/)
 - **GPU**: CUDA-capable GPU (recommended for faster conversion, but CPU works too)
-- **FFmpeg**: Required for audio processing
-- **Transkun**: Must be installed and available in your system PATH
+- **FFmpeg**: [Required for audio processing](https://ffmpeg.org/download.html)
+- **Transkun**: [Must be installed and available in your system PATH](https://github.com/Yujia-Yan/Transkun#model-cards)
 
 ### Python Dependencies
 
