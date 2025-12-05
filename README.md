@@ -13,6 +13,7 @@ A powerful web application for converting MP3 audio files to MIDI format using T
 - 🚀 **Real-time Progress**: Monitor conversion progress with visual indicators
 - 💾 **Download Management**: Easy download of MIDI and sheet files
 - 🎯 **Async Processing**: Non-blocking conversions for better user experience
+- 🔄 **CUDA/CPU Toggle**: Switch between GPU (CUDA) and CPU processing with a simple toggle switch
 
 ## 📋 Requirements
 
@@ -164,8 +165,18 @@ This opens a native window with the web interface (requires `pywebview`).
 
 ### Using the Application
 
+#### Device Selection (CUDA/CPU)
+
+Before converting, you can choose your processing device:
+- **Toggle Switch**: Located next to "Model: Transkun" in the interface
+- **CPU Mode**: Left position - Use CPU for conversion (works on all systems)
+- **CUDA Mode**: Right position - Use GPU for faster conversion (requires CUDA-capable GPU)
+- **Auto-fallback**: If CUDA is selected but not available, the system automatically falls back to CPU
+- **Preference Saved**: Your device preference is saved in browser local storage
+
 #### 1. 📤 Upload MP3 File
 
+- Select your preferred device (CPU or CUDA) using the toggle switch
 - Click "Choose File" and select an MP3 file from your computer
 - Click "Convert MP3" to start the conversion
 - Wait for the conversion to complete
@@ -173,11 +184,12 @@ This opens a native window with the web interface (requires `pywebview`).
 
 #### 2. 🔗 Convert from YouTube/TikTok
 
+- Select your preferred device (CPU or CUDA) using the toggle switch
 - Paste a YouTube or TikTok URL in the input field
 - Click "Convert Link"
 - The application will:
   - Download the video audio
-  - Convert it to MIDI format
+  - Convert it to MIDI format using your selected device
   - Display a preview with thumbnail
   - Provide download links
 
@@ -248,7 +260,8 @@ The application provides a RESTful API for programmatic access:
 
 ### Conversion Endpoints
 - `POST /api/convert` - Start video conversion (YouTube/TikTok)
-  - Request body: `{"media_url": "https://..."}`
+  - Request body: `{"media_url": "https://...", "device": "cuda" | "cpu" | null}`
+  - `device` parameter (optional): Specify "cuda" for GPU or "cpu" for CPU processing. If omitted or null, automatically selects based on CUDA availability.
   - Returns: `{"task_id": "...", "status": "queued"}`
 
 - `GET /api/status/<task_id>` - Check conversion status
@@ -270,10 +283,20 @@ The application provides a RESTful API for programmatic access:
 ### Example API Usage
 
 ```bash
-# Start a conversion
+# Start a conversion (auto-select device)
 curl -X POST http://127.0.0.1:5000/api/convert \
   -H "Content-Type: application/json" \
   -d '{"media_url": "https://www.youtube.com/watch?v=..."}'
+
+# Start a conversion with CPU
+curl -X POST http://127.0.0.1:5000/api/convert \
+  -H "Content-Type: application/json" \
+  -d '{"media_url": "https://www.youtube.com/watch?v=...", "device": "cpu"}'
+
+# Start a conversion with CUDA
+curl -X POST http://127.0.0.1:5000/api/convert \
+  -H "Content-Type: application/json" \
+  -d '{"media_url": "https://www.youtube.com/watch?v=...", "device": "cuda"}'
 
 # Check status
 curl http://127.0.0.1:5000/api/status/<task_id>
@@ -295,6 +318,8 @@ curl -X POST http://127.0.0.1:5000/api/convert-to-sheets \
 
 #### ❌ "CUDA not available"
 - The application works on CPU, but will be slower
+- You can manually select CPU mode using the toggle switch in the interface
+- If CUDA is selected but not available, the system automatically falls back to CPU
 - For GPU support, ensure:
   - CUDA-capable GPU is installed
   - PyTorch with CUDA support is installed

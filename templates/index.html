@@ -1,0 +1,1880 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="icon" href="/templates/icon.ico" type="image/x-icon">
+    <title>MP3 → MIDI Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background: linear-gradient(-45deg, #1f2937, #374151, #111827, #1f2937);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+      }
+      @keyframes gradient {
+        0% {background-position: 0% 50%;}
+        50% {background-position: 100% 50%;}
+        100% {background-position: 0% 50%;}
+      }
+      input[type="file"], input[type="text"], select { 
+        transition: all 0.3s ease; 
+      }
+      input[type="file"] {
+        background-color: transparent !important;
+      }
+      input[type="file"]:focus,
+      input[type="file"]:active,
+      input[type="file"]:focus-visible {
+        outline: none !important;
+        border: none !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+      }
+      input[type="file"]::-webkit-file-upload-button {
+        background-color: rgba(37, 99, 235, 0.2) !important;
+        border: 1px solid rgba(29, 78, 216, 1) !important;
+        color: rgb(147, 197, 253) !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        padding: 6px 12px !important;
+        border-radius: 0.5rem !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease !important;
+      }
+      input[type="file"]:hover::-webkit-file-upload-button {
+        background-color: rgba(37, 99, 235, 0.3) !important;
+      }
+      input[type="file"]::-webkit-file-upload-button:focus,
+      input[type="file"]::-webkit-file-upload-button:active {
+        outline: none !important;
+        background-color: rgba(37, 99, 235, 0.2) !important;
+      }
+      input[type="file"]:active::-webkit-file-upload-button {
+        background-color: rgba(37, 99, 235, 0.25) !important;
+      }
+      input[type="file"]::file-selector-button {
+        background-color: rgba(37, 99, 235, 0.2) !important;
+        border: 1px solid rgba(29, 78, 216, 1) !important;
+        color: rgb(147, 197, 253) !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        padding: 6px 12px !important;
+        border-radius: 0.5rem !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease !important;
+      }
+      input[type="file"]:hover::file-selector-button {
+        background-color: rgba(37, 99, 235, 0.3) !important;
+      }
+      input[type="file"]:active::file-selector-button {
+        background-color: rgba(37, 99, 235, 0.25) !important;
+      }
+      input[type="text"]:hover, select:hover { 
+        background-color: #4b5563; 
+        border-color: #9333ea; 
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+      input[type="text"]:focus, select:focus { 
+        border-color: #3b82f6; 
+        background-color: #4b5563;
+        box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.2);
+        transform: translateY(-1px);
+      }
+      .hover-effect {
+        transition: all 0.3s ease;
+      }
+      .hover-effect:hover { 
+        transform: translateY(-2px); 
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+      .main-card:hover {
+        border-color: rgba(147, 51, 234, 0.4);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+      .history-card:hover {
+        border-color: rgba(147, 51, 234, 0.4);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+      .history-item {
+        transition: all 0.3s ease;
+      }
+      .history-item.flex {
+        display: flex;
+      }
+      .history-item .flex-1 {
+        min-height: 0;
+      }
+      #full-history-list .history-item {
+        height: 100%;
+      }
+      #full-history-list .history-item > .flex-1 {
+        display: flex;
+        flex-direction: column;
+      }
+      #full-history-list .history-item .mt-auto {
+        margin-top: auto;
+      }
+      #history-list .history-item {
+        display: flex;
+        flex-direction: column;
+      }
+      #history-list .history-item > .flex-1 {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      #history-list .history-item .mt-auto {
+        margin-top: auto;
+      }
+      .history-item:hover {
+        transform: translateY(-2px);
+        background: rgba(55, 65, 81, 0.6);
+        border-color: rgba(147, 51, 234, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+      .history-item img {
+        transition: all 0.3s ease;
+        max-height: 180px;
+        object-fit: cover;
+      }
+      .history-item:hover img {
+        transform: scale(1.05);
+      }
+      
+      #videoPreviewContent img {
+        max-height: 400px;
+        width: 100%;
+        object-fit: cover;
+        border-radius: 0.5rem;
+      }
+      .history-item a {
+        transition: all 0.3s ease;
+      }
+      .history-item a:hover {
+        transform: translateY(-2px);
+      }
+      .history-item span[class*="bg-"] {
+        transition: all 0.3s ease;
+      }
+      .history-item:hover span[class*="bg-"] {
+        transform: scale(1.1);
+      }
+      .conversion-time:hover {
+        border-color: #6ee7b7;
+        box-shadow: 0 6px 16px rgba(52, 211, 153, 0.3);
+        transform: translateY(-2px);
+      }
+      .error-message:hover {
+        border-color: #fca5a5;
+        box-shadow: 0 6px 16px rgba(248, 113, 113, 0.3);
+      }
+      iframe:hover {
+        transform: scale(1.02);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+      .loading-dots::after { content: '...'; display: inline-block; overflow: hidden; width: 0; vertical-align: bottom; animation: loadingDots 1s steps(3, end) infinite; letter-spacing: 0.25ch; }
+      @keyframes loadingDots { 0% { width: 0; } 100% { width: 3ch; } }
+      @keyframes shimmer {
+        0% { background-position: -100% 0; }
+        100% { background-position: 100% 0; }
+      }
+      .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #374151;
+        border-radius: 3px;
+        margin-top: 8px;
+        overflow: hidden;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #6ee7b7, #3b82f6, #9333ea);
+        background-size: 200% 100%;
+        width: 0%;
+        transition: width 0.3s ease;
+        animation: shimmer 2s infinite;
+        border-radius: 3px;
+      }
+      .stop-button {
+        margin-top: 12px;
+        width: 100%;
+        padding: 8px;
+        background: linear-gradient(45deg, #ef4444, #dc2626);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      .stop-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        filter: brightness(1.1);
+      }
+      .stop-button:active {
+        transform: scale(0.97);
+      }
+      .audio-player { width: 100%; margin-top: 12px; background: #374151; border-radius: 8px; padding: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); }
+      .audio-player audio { width: 100%; border-radius: 8px; }
+      .conversion-time { background-color: #1f2937; color: #34d399; border-radius: 8px; padding: 10px; font-size: 1.1rem; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); border: 2px solid #34d399; margin-top: 10px; }
+      .error-message { background-color: #1f2937; color: #f87171; border-radius: 8px; padding: 10px; font-size: 1.1rem; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); border: 2px solid #f87171; margin-top: 10px; }
+
+      .hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+      .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+      .history-card { overflow-y: auto; width: 530.39px; max-width: 530.39px; flex: 0 0 530.39px; height: 516.98px !important; max-height: 516.98px !important;       }
+      
+      .chord-block {
+        position: relative;
+        display: inline-block;
+      }
+      .chord-block::before {
+        content: '';
+        position: absolute;
+        height: 126%;
+        width: 100%;
+      }
+      .chord-block:hover {
+        background-color: #3d3a42;
+        cursor: pointer;
+      }
+      
+      .tab-container {
+        display: flex;
+        gap: 0;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid #374151;
+        align-items: center;
+        justify-content: center;
+        border: none;
+      }
+      .tab-button {
+        padding: 12px 24px;
+        background: transparent;
+        border: none;
+        color: #9ca3af;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        position: relative;
+      }
+      .tab-button::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 0;
+        height: 3px;
+        background: #9333ea;
+        transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .tab-button:hover {
+        color: #e5e7eb;
+        transform: translateY(-2px);
+      }
+      .tab-button.active {
+        color: #9333ea;
+      }
+      .tab-button.active::after {
+        width: 100%;
+      }
+      .tab-content {
+        display: none;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .tab-content.active {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+      }
+      
+    </style>
+  </head>
+  <body class="text-gray-200 min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-6xl mx-auto px-4 py-8">
+      {% if system_info %}
+      <div class="bg-gray-800/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-700 hover-effect mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-gray-400 text-sm font-semibold min-w-[60px]">Host:</span>
+            <span class="text-gray-200 text-sm flex-1 break-words">{{ system_info.host_name }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-gray-400 text-sm font-semibold min-w-[60px]">CPU:</span>
+            <span class="text-gray-200 text-sm flex-1 break-words">{{ system_info.cpu }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-gray-400 text-sm font-semibold min-w-[60px]">GPU:</span>
+            <span class="text-gray-200 text-sm flex-1 break-words">{{ system_info.gpu }}</span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      
+      <div class="tab-container">
+        <button class="tab-button active" data-tab="converter">Converter</button>
+        <button class="tab-button" data-tab="history">History</button>
+      </div>
+      
+      <div id="converter-tab" class="tab-content active">
+      <div class="flex flex-col lg:flex-row lg:items-start gap-6">
+
+        <div class="main-card bg-gray-800/80 backdrop-blur-md p-8 rounded-2xl shadow-lg text-center w-full h-full border border-gray-700 hover-effect">
+          <h2 class="text-xl font-semibold text-white">MP3 → MIDI CONVERTER</h2>
+
+          <div class="flex items-center justify-center space-x-4 mb-4">
+            <span class="text-white text-sm">Model: Transkun</span>
+            <div class="flex items-center space-x-2">
+              <span class="text-gray-400 text-xs">CPU</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="device-toggle" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+              <span class="text-gray-400 text-xs">CUDA</span>
+            </div>
+            <button type="button" id="sheets-settings-btn" class="inline-flex items-center justify-center text-center text-sm font-medium px-4 py-2 rounded-lg border border-purple-700 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 hover-effect">
+              Settings
+            </button>
+          </div>
+
+          <form method="post" enctype="multipart/form-data" class="space-y-4" id="file-upload-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="file" name="file" accept=".mp3"
+              class="block w-full text-sm text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:text-white"/>
+            <input type="hidden" name="conversion_library" id="conversion-library-hidden" value="transkun" />
+            <input type="hidden" name="device" id="device-input" value="cuda" />
+                <button type="submit" id="convert-button" class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-4 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">Convert MP3</button>
+          </form>
+
+          <form method="post" class="space-y-4 mt-4" id="url-upload-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="media_url" placeholder="Paste YouTube/TikTok link"
+                   class="block w-full p-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 placeholder-gray-400 hover-effect"/>
+            <input type="hidden" name="conversion_library" id="conversion-library-hidden-youtube" value="transkun" />
+            <input type="hidden" name="device" id="device-input-youtube" value="cuda" />
+                <button type="submit" id="convert-button-youtube" class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-4 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">Convert Link</button>
+          </form>
+
+          <div id="videoPreview" class="mt-4" style="display: none;">
+            <h2 class="text-lg mb-2">Preview:</h2>
+            <div id="videoPreviewContent"></div>
+          </div>
+          
+          {% if video_id %}
+          <div class="mt-4 hover-effect">
+            <h2 class="text-lg mb-2">Preview:</h2>
+            <iframe width="100%" height="200" src="https://www.youtube.com/embed/{{ video_id }}" title="YouTube video player" frameborder="0" allowfullscreen class="rounded-lg shadow-lg hover-effect"></iframe>
+          </div>
+          {% endif %}
+
+          <div id="progressText" style="display: none; margin-top: 16px; margin-bottom: 8px; font-size: 13px; color: #e5e7eb;">Processing...</div>
+          <div class="progress-bar" id="progressBar" style="display: none;">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+
+
+          {% if conversion_time and midi_name %}
+          <div class="conversion-time hover-effect">
+            Done in: {{ conversion_time }} s.
+            <a href="{{ url_for('download_file', filename=midi_name) }}" class="underline hover-effect">Download MIDI</a>
+          </div>
+          {% endif %}
+
+          {% with messages = get_flashed_messages() %}
+            {% if messages %}
+              <div class="error-message hover-effect">{{ messages[0] }}</div>
+            {% endif %}
+          {% endwith %}
+        </div>
+
+        <aside class="w-full h-full">
+          <div class="history-card bg-gray-800/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-700 h-full flex flex-col hover-effect">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-xl font-semibold text-white">Conversion History</h2>
+              <span class="text-xs text-gray-400">Recent</span>
+            </div>
+
+            {% set max_items = 32 %}
+
+            <div id="history-list" class="flex-1 overflow-y-auto pr-0 space-y-3 hide-scrollbar">
+              {% if history and history|length > 0 %}
+                {% for item in history[:max_items] %}
+                  <div class="history-item p-3 rounded-xl bg-gray-700/40 border border-gray-700 hover-effect flex flex-col min-h-0">
+                    <div class="flex items-start gap-3">
+                      {% if item.type == 'youtube' %}
+                        <span class="px-2 py-0.5 text-[10px] rounded-full bg-red-600/30 text-red-300 border border-red-700">YouTube</span>
+                      {% elif item.type == 'tiktok' %}
+                        <span class="px-2 py-0.5 text-[10px] rounded-full bg-purple-600/30 text-purple-200 border border-purple-700">TikTok</span>
+                      {% else %}
+                        <span class="px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">MP3</span>
+                      {% endif %}
+                    </div>
+                    <div class="mt-2 space-y-2 text-sm flex-1 flex flex-col min-h-0">
+                      {% if item.type == 'youtube' %}
+                        {% if item.video_id %}
+                          <a href="https://www.youtube.com/watch?v={{ item.video_id }}" target="_blank" rel="noopener" class="block hover-effect">
+                            <img class="w-full rounded-lg border border-gray-700 hover:opacity-90"
+                                 src="https://img.youtube.com/vi/{{ item.video_id }}/mqdefault.jpg"
+                                 alt="thumb" loading="lazy" style="max-height: 180px; object-fit: cover;" 
+                                 onerror="this.onerror=null; this.src='/templates/notfound.jpg';" />
+                          </a>
+                        {% else %}
+                          <div class="block hover-effect">
+                            <img src="/templates/notfound.jpg" alt="thumb" loading="lazy" class="w-full rounded-lg border border-gray-700" style="max-height: 180px; object-fit: cover;" />
+                          </div>
+                        {% endif %}
+                    
+                        {% if item.video_title %}
+                          <div class="text-gray-300">
+                            <a class="underline hover-effect"
+                               href="{% if item.video_id %}https://www.youtube.com/watch?v={{ item.video_id }}{% else %}{{ item.youtube_url }}{% endif %}"
+                               target="_blank" rel="noopener">{{ item.video_title }}</a>
+                          </div>
+                        {% elif item.youtube_url %}
+                          <div class="text-gray-300">
+                            <a class="underline hover-effect" href="{{ item.youtube_url }}" target="_blank" rel="noopener">{{ item.youtube_url }}</a>
+                          </div>
+                        {% endif %}
+                    
+                      {% elif item.type == 'tiktok' %}
+                        {% if item.thumbnail_url and item.thumbnail_url.strip() %}
+                          <a href="{{ item.tiktok_url }}" target="_blank" rel="noopener" class="block hover-effect">
+                            <img src="{{ item.thumbnail_url }}"
+                                alt="thumb"
+                                loading="lazy"
+                                style="width:100%; max-height: 180px; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" 
+                                onerror="this.onerror=null; this.src='/templates/notfound.jpg'; this.style.borderRadius='0.5rem';" />
+                          </a>
+                        {% else %}
+                          <div class="block hover-effect">
+                            <img src="/templates/notfound.jpg" alt="thumb" loading="lazy" class="w-full rounded-lg border border-gray-700" style="max-height: 180px; object-fit: cover;" />
+                          </div>
+                        {% endif %}
+                        <div class="text-gray-300" title="{{ item.video_title }}">
+                          <a class="underline hover-effect" href="{{ item.tiktok_url }}" target="_blank" rel="noopener">
+                            {{ item.video_title or item.tiktok_url }}
+                          </a>
+                        </div>
+                    
+                      {% else %}
+                        <div class="block hover-effect">
+                          <img src="/templates/notfound.jpg" alt="thumb" loading="lazy" class="w-full rounded-lg border border-gray-700" style="max-height: 180px; object-fit: cover;" />
+                        </div>
+                        <div class="text-gray-300">File:
+                          {% if item.mp3_name %}
+                            <a class="underline hover-effect" href="{{ url_for('serve_upload', filename=item.mp3_name) }}" target="_blank" rel="noopener">{{ item.mp3_name }}</a>
+                          {% else %}—{% endif %}
+                        </div>
+                      {% endif %}
+                    
+                      <div class="flex items-center justify-between text-xs text-gray-400">
+                        <span>Model: {{ item.library or '—' }}</span>
+                        <span>Time: {{ item.conversion_time or '—' }}s</span>
+                      </div>
+                    
+                      <div class="mt-auto pt-2">
+                      {% if item.midi_name %}
+                        <a class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect"
+                           href="{{ url_for('download_file', filename=item.midi_name) }}" download>
+                          Download MIDI
+                        </a>
+                        <div class="mt-1 flex gap-2">
+                          <button data-midi-filename="{{ item.midi_name }}" class="view-tempo-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">
+                            Convert to QWERTY
+                          </button>
+                          <button data-midi-filename="{{ item.midi_name }}" class="download-sheets-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-purple-700 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 hover-effect">
+                            Download Sheets
+                          </button>
+                        </div>
+                      {% endif %}
+                      </div>
+                    </div>
+                    
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="text-gray-400 text-sm">Nothing here yet. Convert something first.</div>
+              {% endif %}
+            </div>
+          </div>
+        </aside>
+
+      </div>
+      </div>
+      
+      <div id="history-tab" class="tab-content">
+        <div class="bg-gray-800/80 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-gray-700">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold text-white">Full Conversion History</h2>
+            <button id="refresh-history-btn" class="inline-flex items-center justify-center text-center text-xs font-medium px-3 py-1.5 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">
+              Refresh
+            </button>
+          </div>
+          
+          <div id="full-history-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[65vh] overflow-y-auto hide-scrollbar items-stretch">
+            <div class="text-center text-gray-400 py-6 col-span-full text-sm">Loading history...</div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+
+    <div id="sheets-settings-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+      <div class="bg-gray-800 rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto hide-scrollbar border border-gray-700 shadow-xl">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-semibold text-white">QWERTY Sheet Converter Settings</h3>
+          <button id="close-settings-modal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <div class="space-y-4 text-white">
+          <div>
+            <label class="block mb-2">Resilience:</label>
+            <input type="range" id="setting-resilience" min="0" max="12" value="2" class="w-full">
+            <span id="resilience-value" class="text-sm text-gray-300">2</span>
+          </div>
+          
+          <div>
+            <label class="block mb-2">Place shifted notes at:</label>
+            <select id="setting-place-shifted" class="bg-gray-700 text-white rounded px-3 py-2 w-full">
+              <option value="start">Start</option>
+              <option value="end">End</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block mb-2">Place out of range notes at:</label>
+            <select id="setting-place-out-of-range" class="bg-gray-700 text-white rounded px-3 py-2 w-full">
+              <option value="inorder">Inorder</option>
+              <option value="start">Start</option>
+              <option value="end">End</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block mb-2">Break lines how:</label>
+            <select id="setting-break-lines-how" class="bg-gray-700 text-white rounded px-3 py-2 w-full">
+              <option value="manually">Manually</option>
+              <option value="realistic">Realistic</option>
+            </select>
+          </div>
+          
+          <div id="break-lines-every-container">
+            <label class="block mb-2">Break lines every (beats):</label>
+            <input type="range" id="setting-break-lines-every" min="1" max="32" value="4" class="w-full">
+            <span id="break-lines-value" class="text-sm text-gray-300">4</span>
+          </div>
+          
+          <div>
+            <label class="block mb-2">Quantize (milliseconds):</label>
+            <input type="range" id="setting-quantize" min="1" max="250" value="35" class="w-full">
+            <span id="quantize-value" class="text-sm text-gray-300">35</span>
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="setting-classic-chord-order" checked class="mr-2">
+            <label for="setting-classic-chord-order">Classic chord order</label>
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="setting-sequential-quantizes" class="mr-2">
+            <label for="setting-sequential-quantizes">Sequential quantizes</label>
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="setting-curly-braces" class="mr-2">
+            <label for="setting-curly-braces">Curly braces for quantized chords</label>
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="setting-include-out-of-range" checked class="mr-2">
+            <label for="setting-include-out-of-range">Include out of range (ctrl) notes</label>
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="setting-show-tempo-marks" checked class="mr-2">
+            <label for="setting-show-tempo-marks">Show tempo/timing marks</label>
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="setting-show-out-of-range-marks" checked class="mr-2">
+            <label for="setting-show-out-of-range-marks">Show out of range (ctrl) text marks</label>
+          </div>
+          
+          <div id="out-of-range-separator-container">
+            <label class="block mb-2">Out of range separator:</label>
+            <input type="text" id="setting-out-of-range-separator" value=":" maxlength="1" class="bg-gray-700 text-white rounded px-3 py-2 w-16">
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="setting-show-bpm-changes" checked class="mr-2">
+            <label for="setting-show-bpm-changes">Show BPM changes as comments</label>
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="setting-auto-transpose" checked class="mr-2">
+            <label for="setting-auto-transpose">Auto transpose (single)</label>
+          </div>
+        </div>
+        
+        <div class="mt-6 pt-4 border-t border-gray-700">
+          <p class="text-base text-gray-200 text-center leading-relaxed">
+            QWERTY Sheet Converter created by 
+            <a href="https://github.com/Albacusphetical" target="_blank" rel="noopener noreferrer" class="text-purple-400 hover:text-purple-300 underline font-medium">@Albacusphetical</a>
+            and 
+            <a href="https://github.com/ArijanJ" target="_blank" rel="noopener noreferrer" class="text-purple-400 hover:text-purple-300 underline font-medium">@ArijanJ</a>
+            <br>
+            <a href="https://github.com/ArijanJ/midi-converter" target="_blank" rel="noopener noreferrer" class="text-purple-400 hover:text-purple-300 underline mt-1 inline-block font-medium">
+              View source on GitHub
+            </a>
+          </p>
+        </div>
+        
+        <div class="mt-6 flex gap-3">
+          <button id="save-settings" class="flex-1 bg-purple-700 hover:bg-purple-600 text-white rounded-lg py-2 px-4 hover-effect">
+            Save Settings
+          </button>
+          <button id="reset-settings" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2 px-4 hover-effect">
+            Reset to Defaults
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-tempo-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+      <div id="tempo-modal-content" class="bg-gray-800 rounded-lg p-0.5 max-w-[95vw] w-full mx-2 max-h-[95vh] overflow-hidden border border-gray-700 shadow-xl flex flex-col relative">
+        <div id="tempo-modal-buttons" class="absolute top-0 right-0 z-[100] flex items-center gap-2 pr-1 pt-1" style="pointer-events: auto;">
+          <button id="copy-tempo-text" class="text-gray-400 hover:text-white text-xs" style="background: transparent; border: none; padding: 0; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;">Copy</button>
+          <button id="fullscreen-tempo-modal" class="text-gray-400 hover:text-white text-sm" style="background: transparent; border: none; padding: 0; cursor: pointer; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;" title="Fullscreen">⛶</button>
+          <button id="close-tempo-modal" class="text-gray-400 hover:text-white text-xl" style="background: transparent; border: none; padding: 0; cursor: pointer; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;">&times;</button>
+        </div>
+        
+        <div id="tempo-text-content" class="flex-1 overflow-auto hide-scrollbar bg-gray-900 rounded p-1 font-mono text-sm text-gray-200 border border-gray-700 leading-relaxed" style="white-space: pre; word-wrap: normal; overflow-wrap: normal;">
+          <div class="text-center text-gray-400">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <script nonce="{{ csp_nonce }}">
+      function updateDeviceInputs() {
+        const deviceToggle = document.getElementById('device-toggle');
+        const deviceInput = document.getElementById('device-input');
+        const deviceInputYoutube = document.getElementById('device-input-youtube');
+        if (deviceToggle) {
+          const device = deviceToggle.checked ? 'cuda' : 'cpu';
+          if (deviceInput) deviceInput.value = device;
+          if (deviceInputYoutube) deviceInputYoutube.value = device;
+          localStorage.setItem('transkunDevice', device);
+        }
+      }
+      
+      const deviceToggle = document.getElementById('device-toggle');
+      const savedDevice = localStorage.getItem('transkunDevice') || 'cuda';
+      if (deviceToggle) {
+        deviceToggle.checked = savedDevice === 'cuda';
+        updateDeviceInputs();
+        deviceToggle.addEventListener('change', updateDeviceInputs);
+      }
+      
+      window.convertToSheets = function(event, midiFilename) {
+        console.log('convertToSheets called with:', midiFilename);
+        
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        
+        let button = null;
+        if (event && event.target) {
+          button = event.target.closest('.download-sheets-btn');
+        }
+        
+        if (!button) {
+          console.error('Could not find button element');
+          alert('Error: Could not find button element');
+          return;
+        }
+        
+        const originalText = button.textContent || 'Download Sheets';
+        button.disabled = true;
+        button.textContent = 'Converting...';
+        
+        console.log('Sending request to convert:', midiFilename);
+        
+        const savedSettings = loadSheetsSettings();
+        
+        fetch('/api/convert-to-sheets', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            midi_filename: midiFilename,
+            settings: savedSettings
+          })
+        })
+        .then(response => {
+          console.log('Response status:', response.status);
+          if (!response.ok) {
+            return response.json().then(err => Promise.reject(new Error(err.error || `HTTP ${response.status}`)));
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Conversion successful:', data);
+          if (data.success && data.download_url) {
+            const link = document.createElement('a');
+            link.href = data.download_url;
+            link.download = data.sheets_filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+              document.body.removeChild(link);
+            }, 100);
+            
+            button.textContent = 'Downloaded!';
+            setTimeout(() => {
+              button.textContent = originalText;
+              button.disabled = false;
+            }, 2000);
+          } else {
+            throw new Error(data.error || 'Conversion failed');
+          }
+        })
+        .catch(error => {
+          console.error('Convert to sheets error:', error);
+          alert('Failed to convert MIDI to sheets: ' + (error.message || error.error || error));
+          button.disabled = false;
+          button.textContent = originalText;
+        });
+      };
+      
+      const defaultSheetsSettings = {
+        resilience: 2,
+        place_shifted_notes: 'start',
+        place_out_of_range_notes: 'inorder',
+        break_lines_how: 'manually',
+        break_lines_every: 4,
+        quantize: 35,
+        classic_chord_order: true,
+        sequential_quantizes: false,
+        curly_braces_for_quantized_chords: false,
+        include_out_of_range: true,
+        show_tempo_timing_marks: true,
+        show_out_of_range_text_marks: true,
+        out_of_range_separator: ':',
+        show_bpm_changes_as_comments: true,
+        auto_transpose: true,
+      };
+
+      function loadSheetsSettings() {
+        const saved = localStorage.getItem('sheetsSettings');
+        if (saved) {
+          try {
+            return JSON.parse(saved);
+          } catch (e) {
+            console.error('Failed to parse saved settings:', e);
+          }
+        }
+        return defaultSheetsSettings;
+      }
+      
+      let currentTaskId = null;
+      let isStopped = false;
+      let buttonStates = {};
+      
+      const progressText = document.getElementById('progressText');
+      const progressBar = document.getElementById('progressBar');
+      const progressFill = document.getElementById('progressFill');
+      
+
+      function attachLoadingState(id) {
+        var button = document.getElementById(id);
+        if (!button) return;
+        buttonStates[id] = button.textContent;
+      }
+      attachLoadingState('convert-button');
+      attachLoadingState('convert-button-youtube');
+      
+      let activeConvertButtonId = null;
+      
+      function convertToStopButton(buttonId) {
+        const button = document.getElementById(buttonId);
+        if (!button) return;
+        
+        activeConvertButtonId = buttonId;
+        
+        function stopHandler(event) {
+          event.preventDefault();
+          if (!currentTaskId || isStopped) return;
+          
+          const btn = event.target;
+          isStopped = true;
+          btn.disabled = true;
+          btn.textContent = 'Stopping...';
+          
+          fetch(`/api/stop/${currentTaskId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          }).then(response => {
+            if (response.ok) {
+              progressText.textContent = 'Cancelled';
+              resetButtonStates();
+              setTimeout(() => {
+                progressText.style.display = 'none';
+                progressBar.style.display = 'none';
+                currentTaskId = null;
+                activeConvertButtonId = null;
+                setTimeout(() => { isStopped = false; }, 1000);
+              }, 500);
+            }
+          }).catch(err => {
+            console.error('Stop error:', err);
+            resetButtonStates();
+            progressText.textContent = 'Cancelling...';
+            setTimeout(() => {
+              progressText.style.display = 'none';
+              progressBar.style.display = 'none';
+              currentTaskId = null;
+              activeConvertButtonId = null;
+              setTimeout(() => { isStopped = false; }, 1000);
+            }, 500);
+          });
+        }
+        
+        if (!button.classList.contains('stop-mode')) {
+          button.classList.add('stop-mode');
+          button.classList.remove('loading-dots');
+          button.classList.remove('border-blue-700', 'bg-blue-600/20', 'text-blue-300', 'hover:bg-blue-600/30');
+          button.classList.add('border-red-700', 'bg-red-600/20', 'text-red-300', 'hover:bg-red-600/30');
+          button.textContent = 'Stop Conversion';
+          button.onclick = stopHandler;
+        }
+      }
+      
+      function revertStopButtons() {
+        const convertButton = document.getElementById('convert-button');
+        const convertButtonYoutube = document.getElementById('convert-button-youtube');
+        
+        if (convertButton && convertButton.classList.contains('stop-mode')) {
+          convertButton.classList.remove('stop-mode');
+          convertButton.classList.remove('border-red-700', 'bg-red-600/20', 'text-red-300', 'hover:bg-red-600/30');
+          convertButton.classList.add('border-blue-700', 'bg-blue-600/20', 'text-blue-300', 'hover:bg-blue-600/30');
+          convertButton.textContent = buttonStates['convert-button'] || 'Convert MP3';
+          convertButton.onclick = null;
+        }
+        
+        if (convertButtonYoutube && convertButtonYoutube.classList.contains('stop-mode')) {
+          convertButtonYoutube.classList.remove('stop-mode');
+          convertButtonYoutube.classList.remove('border-red-700', 'bg-red-600/20', 'text-red-300', 'hover:bg-red-600/30');
+          convertButtonYoutube.classList.add('border-blue-700', 'bg-blue-600/20', 'text-blue-300', 'hover:bg-blue-600/30');
+          convertButtonYoutube.textContent = buttonStates['convert-button-youtube'] || 'Convert Link';
+          convertButtonYoutube.onclick = null;
+        }
+      }
+      
+      function resetButtonStates() {
+        revertStopButtons();
+        Object.keys(buttonStates).forEach(id => {
+          const button = document.getElementById(id);
+          if (button) {
+            button.classList.remove('loading-dots');
+            button.textContent = buttonStates[id];
+            button.disabled = false;
+          }
+        });
+      }
+
+      function showConversionResult(resultData) {
+        const videoPreview = document.getElementById('videoPreview');
+        const videoPreviewContent = document.getElementById('videoPreviewContent');
+        
+        if (videoPreview && videoPreviewContent) {
+          let html = '';
+          
+          if (resultData.type === 'youtube' && resultData.video_id) {
+            const videoId = resultData.video_id;
+            const youtubeUrl = resultData.youtube_url || `https://www.youtube.com/watch?v=${videoId}`;
+            const thumbnailUrl = resultData.thumbnail_url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+            
+            const embedUrlNoCookie = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&modestbranding=1&rel=0&controls=1&iv_load_policy=3&cc_load_policy=0&fs=1&playsinline=1&enablejsapi=1`;
+            const embedUrlStandard = `https://www.youtube.com/embed/${videoId}?autoplay=0&modestbranding=1&rel=0&controls=1&iv_load_policy=3&cc_load_policy=0&fs=1&playsinline=1&enablejsapi=1`;
+            
+            html = `<div class="video-player-container" style="position:relative; width:100%; padding-bottom:56.25%; background:#000; border-radius:0.5rem; overflow:hidden; border:1px solid #374151;">`;
+            html += `<iframe id="youtube-player-${videoId}" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" src="${embedUrlNoCookie}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
+            
+            html += `<div id="youtube-fallback-${videoId}" style="position:absolute; top:0; left:0; width:100%; height:100%; display:none; cursor:pointer; background:#000;" onclick="window.open('${youtubeUrl}', '_blank');">`;
+            html += `<img src="${thumbnailUrl}" alt="Video thumbnail" style="width:100%; max-height:400px; height:auto; object-fit:cover;" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg';" />`;
+            html += `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:68px; height:48px; pointer-events:none;">`;
+            html += `<svg width="68" height="48" viewBox="0 0 68 48"><path d="M66.52,7.74c-0.78-2.93-2.49-5.41-5.42-6.19C55.79,.13,34,0,34,0S12.21,.13,6.9,1.55 C3.97,2.33,2.27,4.81,1.48,7.74C0.06,13.05,0,24,0,24s0.06,10.95,1.48,16.26c0.78,2.93,2.49,5.41,5.42,6.19 C12.21,47.87,34,48,34,48s21.79-0.13,27.1-1.55c2.93-0.78,4.63-3.26,5.42-6.19C67.94,34.95,68,24,68,24S67.94,13.05,66.52,7.74z" fill="#f00"></path><path d="M 45,24 27,14 27,34" fill="#fff"></path></svg>`;
+            html += `</div>`;
+            html += `<div style="position:absolute; bottom:10px; left:50%; transform:translateX(-50%); color:#fff; font-size:12px; background:rgba(0,0,0,0.7); padding:4px 8px; border-radius:4px;">Click to watch on YouTube</div>`;
+            html += `</div>`;
+            html += `</div>`;
+            
+            if (resultData.video_title) {
+              html += `<div class="mt-2 text-gray-300 text-sm">`;
+              html += `<a href="${youtubeUrl}" target="_blank" rel="noopener" class="underline hover-effect">${resultData.video_title}</a>`;
+              html += `</div>`;
+            }
+            
+            setTimeout(function() {
+              const iframe = document.getElementById('youtube-player-${videoId}');
+              const fallback = document.getElementById('youtube-fallback-${videoId}');
+              if (!iframe) return;
+              
+              iframe.addEventListener('load', function() {
+                setTimeout(function() {
+                  try {
+                    const rect = iframe.getBoundingClientRect();
+                    if (rect.height === 0 || rect.width === 0) {
+                      if (iframe.src.includes('youtube-nocookie.com')) {
+                        iframe.src = '${embedUrlStandard}';
+                      } else {
+                        iframe.style.display = 'none';
+                        if (fallback) fallback.style.display = 'block';
+                      }
+                    }
+                  } catch(e) {
+                  }
+                }, 2000);
+              });
+              
+              iframe.addEventListener('error', function() {
+                if (iframe.src.includes('youtube-nocookie.com')) {
+                  iframe.src = '${embedUrlStandard}';
+                } else {
+                  iframe.style.display = 'none';
+                  if (fallback) fallback.style.display = 'block';
+                }
+              });
+            }, 100);
+          } 
+          else if (resultData.type === 'tiktok') {
+            if (resultData.thumbnail_url && resultData.thumbnail_url.trim()) {
+            html = `<a href="${resultData.tiktok_url || '#'}" target="_blank" rel="noopener" class="block hover-effect">`;
+              html += `<img src="${resultData.thumbnail_url}" alt="Video thumbnail" style="width:100%; max-height:400px; height:auto; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" onerror="this.onerror=null; this.src='/templates/notfound.jpg';" />`;
+            html += `</a>`;
+            } else {
+              html = `<div class="block hover-effect">`;
+              html += `<img src="/templates/notfound.jpg" alt="Video thumbnail" style="width:100%; max-height:400px; height:auto; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" />`;
+              html += `</div>`;
+            }
+          }
+          
+          if (resultData.download_url && resultData.midi_name) {
+            html += `<div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">`;
+            html += `<a href="${resultData.download_url}" class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect" download>`;
+            html += `Download MIDI`;
+            html += `</a>`;
+            html += `<div style="display: flex; gap: 8px;">`;
+            html += `<button data-midi-filename="${resultData.midi_name}" class="view-tempo-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">`;
+            html += `Convert to QWERTY`;
+            html += `</button>`;
+            html += `<button data-midi-filename="${resultData.midi_name}" class="download-sheets-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-purple-700 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 hover-effect">`;
+            html += `Download Sheets`;
+            html += `</button>`;
+            html += `</div>`;
+            html += `</div>`;
+          }
+          
+          if (html) {
+            videoPreviewContent.innerHTML = html;
+            videoPreview.style.display = 'block';
+          }
+        }
+        
+        const conversionTimeDisplay = document.getElementById('conversionTimeDisplay');
+        if (conversionTimeDisplay) {
+          const timeText = document.getElementById('conversionTimeText');
+          const downloadLink = document.getElementById('conversionDownloadLink');
+          
+          if (timeText && resultData.conversion_time) {
+            timeText.textContent = `Done in: ${resultData.conversion_time} s. `;
+          }
+          
+          if (downloadLink && resultData.download_url && resultData.midi_name) {
+            downloadLink.href = resultData.download_url;
+            downloadLink.textContent = 'Download MIDI';
+          }
+          
+          conversionTimeDisplay.style.display = 'block';
+        }
+        
+        addToHistory(resultData);
+      }
+      
+      function addToHistory(resultData) {
+        try {
+          const historyList = document.getElementById('history-list');
+          if (!historyList) return;
+          
+          const historyItem = {
+            type: resultData.type,
+            video_id: resultData.video_id,
+            video_title: resultData.video_title,
+            thumbnail_url: resultData.thumbnail_url,
+            youtube_url: resultData.youtube_url,
+            tiktok_url: resultData.tiktok_url,
+            midi_name: resultData.midi_name,
+            download_url: resultData.download_url,
+            conversion_time: resultData.conversion_time,
+            library: resultData.library || 'Transkun',
+          };
+          
+          const itemHTML = createHistoryItemHTML(historyItem);
+          
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = itemHTML.trim();
+          const historyItemElement = tempDiv.firstElementChild;
+          
+          if (historyItemElement) {
+            const emptyMessage = historyList.querySelector('.text-gray-400');
+            if (emptyMessage && emptyMessage.textContent.includes('Nothing here yet')) {
+              emptyMessage.remove();
+            }
+            
+            historyList.insertBefore(historyItemElement, historyList.firstChild);
+            
+            const items = historyList.querySelectorAll('.history-item');
+            for (let i = 32; i < items.length; i++) {
+              items[i].remove();
+            }
+          }
+        } catch (error) {
+          console.error('Error adding to history:', error);
+        }
+      }
+      
+      function createHistoryItemHTML(item) {
+        let html = '<div class="history-item p-3 rounded-xl bg-gray-700/40 border border-gray-700 hover-effect flex flex-col h-full min-h-0">';
+        html += '<div class="flex items-start gap-3">';
+        
+        if (item.type === 'youtube') {
+          html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-red-600/30 text-red-300 border border-red-700">YouTube</span>';
+        } else if (item.type === 'tiktok') {
+          html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-purple-600/30 text-purple-200 border border-purple-700">TikTok</span>';
+        } else {
+          html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">MP3</span>';
+        }
+        
+        html += '</div>';
+        html += '<div class="mt-2 space-y-2 text-sm flex-1 flex flex-col min-h-0">';
+        
+        if (item.type === 'youtube') {
+          if (item.video_id) {
+            html += `<a href="https://www.youtube.com/watch?v=${item.video_id}" target="_blank" rel="noopener" class="block hover-effect">`;
+            html += `<img class="w-full rounded-lg border border-gray-700 hover:opacity-90" src="https://img.youtube.com/vi/${item.video_id}/mqdefault.jpg" alt="thumb" loading="lazy" style="max-height: 180px; object-fit: cover;" onerror="this.onerror=null; this.src='/templates/notfound.jpg';" />`;
+            html += '</a>';
+          } else {
+            html += '<div class="block hover-effect">';
+            html += '<img src="/templates/notfound.jpg" alt="thumb" loading="lazy" class="w-full rounded-lg border border-gray-700" style="max-height: 180px; object-fit: cover;" />';
+            html += '</div>';
+          }
+          
+          if (item.video_title) {
+            html += '<div class="text-gray-300">';
+            const youtubeUrl = item.video_id ? `https://www.youtube.com/watch?v=${item.video_id}` : (item.youtube_url || '#');
+            html += `<a class="underline hover-effect" href="${youtubeUrl}" target="_blank" rel="noopener">${item.video_title}</a>`;
+            html += '</div>';
+          } else if (item.youtube_url) {
+            html += '<div class="text-gray-300">';
+            html += `<a class="underline hover-effect" href="${item.youtube_url}" target="_blank" rel="noopener">${item.youtube_url}</a>`;
+            html += '</div>';
+          }
+        }
+        else if (item.type === 'tiktok') {
+          if (item.thumbnail_url && item.thumbnail_url.trim()) {
+            html += `<a href="${item.tiktok_url || '#'}" target="_blank" rel="noopener" class="block hover-effect">`;
+            html += `<img src="${item.thumbnail_url}" alt="thumb" loading="lazy" style="width:100%; max-height: 180px; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" onerror="this.onerror=null; this.src='/templates/notfound.jpg'; this.style.borderRadius='0.5rem';" />`;
+            html += '</a>';
+          } else {
+            html += '<div class="block hover-effect">';
+            html += '<img src="/templates/notfound.jpg" alt="thumb" loading="lazy" class="w-full rounded-lg border border-gray-700" style="max-height: 180px; object-fit: cover;" />';
+            html += '</div>';
+          }
+          html += `<div class="text-gray-300" title="${item.video_title || ''}">`;
+          html += `<a class="underline hover-effect" href="${item.tiktok_url || '#'}" target="_blank" rel="noopener">${item.video_title || item.tiktok_url || ''}</a>`;
+          html += '</div>';
+        }
+        else {
+          html += '<div class="block hover-effect">';
+          html += '<img src="/templates/notfound.jpg" alt="thumb" loading="lazy" class="w-full rounded-lg border border-gray-700" style="max-height: 180px; object-fit: cover;" />';
+          html += '</div>';
+          html += '<div class="text-gray-300">File: ';
+          if (item.mp3_name) {
+            const mp3Url = item.mp3_url || `/uploads/${item.mp3_name}`;
+            html += `<a class="underline hover-effect" href="${mp3Url}" target="_blank" rel="noopener">${item.mp3_name}</a>`;
+          } else {
+            html += '—';
+          }
+          html += '</div>';
+        }
+        
+        html += '<div class="flex items-center justify-between text-xs text-gray-400">';
+        html += `<span>Model: ${item.library || '—'}</span>`;
+        html += `<span>Time: ${item.conversion_time || '—'}s</span>`;
+        html += '</div>';
+        
+        html += '<div class="mt-auto pt-2">';
+        if (item.midi_name) {
+          const downloadUrl = item.download_url || `/converted/${item.midi_name}`;
+          html += `<a class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect" href="${downloadUrl}" download>`;
+          html += 'Download MIDI';
+          html += '</a>';
+          html += '<div class="mt-1 flex gap-2">';
+          html += `<button data-midi-filename="${item.midi_name}" class="view-tempo-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">`;
+          html += 'Convert to QWERTY';
+          html += '</button>';
+          html += `<button data-midi-filename="${item.midi_name}" class="download-sheets-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-purple-700 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 hover-effect">`;
+          html += 'Download Sheets';
+          html += '</button>';
+          html += '</div>';
+        }
+        html += '</div>';
+        
+        html += '</div>';
+        html += '</div>';
+        
+        return html;
+      }
+
+      const youtubeForm = document.querySelector('form input[name="media_url"]')?.closest('form');
+      if (youtubeForm) {
+        youtubeForm.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          
+          const urlInput = this.querySelector('input[name="media_url"]');
+          const url = urlInput.value.trim();
+          
+          if (!url) {
+            alert('Please enter a URL');
+            return;
+          }
+          
+          const videoPreview = document.getElementById('videoPreview');
+          const conversionTimeDisplay = document.getElementById('conversionTimeDisplay');
+          if (videoPreview) videoPreview.style.display = 'none';
+          if (conversionTimeDisplay) conversionTimeDisplay.style.display = 'none';
+          progressText.style.display = 'block';
+          progressBar.style.display = 'block';
+          progressText.textContent = 'Starting conversion...';
+          progressFill.style.width = '10%';
+          convertToStopButton('convert-button-youtube');
+          isStopped = false;
+          
+          try {
+            const deviceToggleEl = document.getElementById('device-toggle');
+            const device = deviceToggleEl ? (deviceToggleEl.checked ? 'cuda' : 'cpu') : 'cuda';
+            const response = await fetch('/api/convert', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                media_url: url,
+                device: device,
+              }),
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to start conversion');
+            }
+            
+            const data = await response.json();
+            currentTaskId = data.task_id;
+            
+            let attempts = 0;
+            const maxAttempts = 300;
+            
+            while (!isStopped && attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              if (isStopped) {
+                break;
+              }
+              
+              try {
+                const statusResponse = await fetch(`/api/status/${currentTaskId}`);
+                const statusData = await statusResponse.json();
+                
+                if (statusData.status === 'completed') {
+                  if (!isStopped) {
+                    progressFill.style.width = '100%';
+                    progressText.textContent = 'Done!';
+                    
+                    setTimeout(function() {
+                      progressText.style.display = 'none';
+                      progressBar.style.display = 'none';
+                      showConversionResult(statusData);
+                      resetButtonStates();
+                    }, 500);
+                  }
+                  return;
+                } else if (statusData.status === 'cancelled') {
+                  isStopped = true;
+                  progressText.textContent = 'Cancelled';
+                  break;
+                } else if (statusData.status === 'error') {
+                  throw new Error(statusData.error || 'Conversion failed');
+                } else {
+                  if (!isStopped) {
+                    progressText.textContent = statusData.progress || 'Processing...';
+                    progressFill.style.width = `${60 + (attempts / maxAttempts) * 30}%`;
+                  }
+                }
+              } catch (err) {
+                console.error('Status check error:', err);
+                if (isStopped) break;
+              }
+              
+              attempts++;
+            }
+            
+            if (isStopped) {
+              resetButtonStates();
+              progressText.style.display = 'none';
+              progressBar.style.display = 'none';
+              currentTaskId = null;
+              return;
+            }
+            
+            if (attempts >= maxAttempts) {
+              throw new Error('Conversion timeout');
+            }
+          } catch (err) {
+            alert('Error: ' + err.message);
+            progressText.style.display = 'none';
+            progressBar.style.display = 'none';
+          } finally {
+            currentTaskId = null;
+          }
+        });
+      }
+
+      document.addEventListener('click', function(event) {
+        const button = event.target.closest('.view-tempo-btn');
+        if (button) {
+          event.preventDefault();
+          event.stopPropagation();
+          const midiFilename = button.getAttribute('data-midi-filename');
+          if (midiFilename) {
+            viewTempoText(midiFilename);
+          }
+        }
+      });
+
+      document.addEventListener('click', function(event) {
+        const button = event.target.closest('.download-sheets-btn');
+        if (button) {
+          event.preventDefault();
+          event.stopPropagation();
+          const midiFilename = button.getAttribute('data-midi-filename');
+          if (midiFilename) {
+            window.convertToSheets(event, midiFilename);
+          }
+        }
+      });
+
+      const tempoColors = {
+        long: '#a3f0a3',
+        quadruple: '#a3f0a3',
+        whole: '#74da74',
+        half: '#9ada5a',
+        quarter: '#c0c05a',
+        eighth: '#da7e5a',
+        sixteenth: '#daa6a6',
+        thirtysecond: '#ff1900',
+        sixtyfourth: '#9c0f00'
+      };
+
+      function separator(beat, difference) {
+        if (difference < beat / 4)
+          return '-'
+        if (difference < beat / 2)
+          return ' '
+        if (difference < beat)
+          return ' - '
+        if (difference < beat * 2)
+          return ', '
+        if (difference < beat * 3)
+          return '... '
+        if (difference < beat * 4)
+          return '.... '
+        else return '...... '
+      }
+
+      function color_for_chord(beat, difference) {
+        difference -= 0.5;
+        
+        let color = tempoColors.long;
+        
+        if (difference < beat / 16) color = tempoColors.sixtyfourth;
+        else if (difference < beat / 8) color = tempoColors.thirtysecond;
+        else if (difference < beat / 4) color = tempoColors.sixteenth;
+        else if (difference < beat / 2) color = tempoColors.eighth;
+        else if (difference < beat) color = tempoColors.quarter;
+        else if (difference < beat * 2)
+          color = tempoColors.half;
+        else if (difference < beat * 4) color = tempoColors.whole;
+        else if (difference < beat * 8) color = tempoColors.quadruple;
+        else if (difference < beat * 16) color = tempoColors.long;
+        
+        return color;
+      }
+
+      function getColorFromSeparator(separatorStr) {
+        if (!separatorStr) return tempoColors.long;
+        
+        if (separatorStr === '...... ') return tempoColors.quadruple;
+        if (separatorStr === '.... ') return tempoColors.whole;
+        if (separatorStr === '... ') return tempoColors.whole;
+        if (separatorStr === '...') return tempoColors.whole;
+        if (separatorStr === ', ') return tempoColors.half;
+        if (separatorStr === ' - ') return tempoColors.quarter;
+        if (separatorStr === ' ') return tempoColors.eighth;
+        if (separatorStr === '-') return tempoColors.sixteenth;
+        
+        return tempoColors.long;
+      }
+
+      function isSeparatorAt(text, pos) {
+        if (pos >= text.length) return null;
+        
+        if (pos + 8 <= text.length && text.substring(pos, pos + 8) === '...... ') {
+          return { type: '...... ', len: 8 };
+        }
+        
+        if (pos + 5 <= text.length && text.substring(pos, pos + 5) === '.... ') {
+          return { type: '.... ', len: 5 };
+        }
+        
+        if (pos + 4 <= text.length && text.substring(pos, pos + 4) === '... ') {
+          return { type: '... ', len: 4 };
+        }
+        
+        if (pos + 3 <= text.length && text.substring(pos, pos + 3) === '...') {
+          if (pos + 4 > text.length || text[pos + 3] !== '.') {
+            if (pos + 3 >= text.length || text[pos + 3] === ' ') {
+              return { type: '...', len: 3 };
+            }
+          }
+        }
+        
+        if (pos + 3 <= text.length && text.substring(pos, pos + 3) === ' - ') {
+          return { type: ' - ', len: 3 };
+        }
+        
+        if (pos + 2 <= text.length && text.substring(pos, pos + 2) === ', ') {
+          return { type: ', ', len: 2 };
+        }
+        
+        if (text[pos] === '-') {
+          if (pos === 0 || text[pos - 1] !== ' ') {
+            return { type: '-', len: 1 };
+          }
+        }
+        
+        if (text[pos] === ' ') {
+          return { type: ' ', len: 1 };
+        }
+        
+        return null;
+      }
+
+      function colorizeTempoText(text) {
+        const lines = text.split('\n');
+        let result = '';
+        let skipNextEmpty = false;
+        
+        for (const line of lines) {
+          if (line.trim().startsWith('Transpose by:')) {
+            const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            result += escaped + '\n';
+            skipNextEmpty = true;
+            continue;
+          }
+          
+          if (skipNextEmpty && !line.trim()) {
+            skipNextEmpty = false;
+            continue;
+          }
+          
+          skipNextEmpty = false;
+          
+          if (!line.trim()) {
+            result += '\n';
+            continue;
+          }
+          
+          if (line.trim().startsWith('<!--')) {
+            const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            result += escaped + '\n';
+            continue;
+          }
+          
+          const separators = [];
+          let pos = 0;
+          
+          while (pos < line.length) {
+            const sepInfo = isSeparatorAt(line, pos);
+            
+            if (sepInfo) {
+              separators.push({
+                start: pos,
+                end: pos + sepInfo.len,
+                text: sepInfo.type,
+                color: getColorFromSeparator(sepInfo.type)
+              });
+              pos += sepInfo.len;
+            } else {
+              pos++;
+            }
+          }
+          
+          const charColors = new Array(line.length);
+          for (let i = 0; i < line.length; i++) {
+            charColors[i] = tempoColors.long;
+          }
+          
+          let segmentStart = 0;
+          
+          for (let i = 0; i < separators.length; i++) {
+            const sep = separators[i];
+            
+            for (let j = segmentStart; j < sep.end && j < line.length; j++) {
+              charColors[j] = sep.color;
+            }
+            
+            segmentStart = sep.end;
+          }
+          
+          if (separators.length > 0) {
+            const lastColor = separators[separators.length - 1].color;
+            for (let i = segmentStart; i < line.length; i++) {
+              charColors[i] = lastColor;
+            }
+          }
+          
+          const isOutOfRange = new Array(line.length).fill(false);
+          for (let i = 0; i < line.length - 1; i++) {
+            if (line[i] === ':' && /[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|\\:";'<>?,./`~-]/.test(line[i + 1])) {
+              isOutOfRange[i] = true;
+              isOutOfRange[i + 1] = true;
+            }
+          }
+          
+          let chordStart = 0;
+          
+          for (let i = 0; i < separators.length; i++) {
+            const sep = separators[i];
+            const chordEnd = sep.end;
+            
+            result += '<span class="chord-block svelte-1l3km4k">';
+            
+            for (let j = chordStart; j < chordEnd && j < line.length; j++) {
+              const char = line[j];
+              const color = charColors[j] || tempoColors.long;
+              const escaped = char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              
+              if (isOutOfRange[j]) {
+                result += `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em; text-stroke: 0.5px ${color}; -webkit-text-stroke: 0.5px ${color};">${escaped}</span>`;
+              } else {
+                result += `<span style="color:${color}">${escaped}</span>`;
+              }
+            }
+            
+            result += '</span>';
+            
+            chordStart = chordEnd;
+          }
+          
+          if (chordStart < line.length) {
+            result += '<span class="chord-block svelte-1l3km4k">';
+            for (let i = chordStart; i < line.length; i++) {
+              const char = line[i];
+              const color = charColors[i] || tempoColors.long;
+              const escaped = char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              
+              if (isOutOfRange[i]) {
+                result += `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em;">${escaped}</span>`;
+              } else {
+                result += `<span style="color:${color}">${escaped}</span>`;
+              }
+            }
+            result += '</span>';
+          }
+          
+          if (separators.length === 0) {
+            result += '<span class="chord-block svelte-1l3km4k">';
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i];
+              const color = charColors[i] || tempoColors.long;
+              const escaped = char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              
+              if (isOutOfRange[i]) {
+                result += `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em;">${escaped}</span>`;
+              } else {
+                result += `<span style="color:${color}">${escaped}</span>`;
+              }
+            }
+            result += '</span>';
+          }
+          
+          result += '\n';
+        }
+        
+        return result;
+      }
+
+      async function viewTempoText(midiFilename) {
+        const modal = document.getElementById('view-tempo-modal');
+        const content = document.getElementById('tempo-text-content');
+        
+        if (!modal || !content) return;
+        
+        modal.classList.remove('hidden');
+        content.innerHTML = '<div class="text-center text-gray-400">Loading sheet text...</div>';
+        
+        try {
+          const savedSettings = loadSheetsSettings();
+          
+          const response = await fetch('/api/convert-to-sheets', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              midi_filename: midiFilename,
+              settings: savedSettings
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('Response data:', data);
+          console.log('sheet_text exists:', 'sheet_text' in data);
+          console.log('sheet_text value:', data.sheet_text);
+          console.log('sheet_text type:', typeof data.sheet_text);
+          console.log('sheet_text length:', data.sheet_text ? data.sheet_text.length : 'N/A');
+          
+          if (data.success && data.sheet_text !== undefined && data.sheet_text !== null) {
+            const coloredText = colorizeTempoText(data.sheet_text);
+            content.innerHTML = coloredText;
+          } else {
+            console.error('Missing sheet_text or success flag. Response:', data);
+            throw new Error(data.error || 'Failed to load sheet text');
+          }
+        } catch (error) {
+          console.error('Convert to QWERTY error:', error);
+          content.innerHTML = `<div class="text-center text-red-400">Error: ${error.message}</div>`;
+        }
+      }
+
+      const viewTempoModal = document.getElementById('view-tempo-modal');
+      const closeTempoModal = document.getElementById('close-tempo-modal');
+      const copyTempoTextBtn = document.getElementById('copy-tempo-text');
+
+      if (closeTempoModal) {
+        closeTempoModal.addEventListener('click', () => {
+          if (viewTempoModal) viewTempoModal.classList.add('hidden');
+        });
+      }
+
+      if (viewTempoModal) {
+        viewTempoModal.addEventListener('click', (e) => {
+          if (e.target === viewTempoModal) {
+            viewTempoModal.classList.add('hidden');
+          }
+        });
+      }
+
+      if (copyTempoTextBtn) {
+        copyTempoTextBtn.addEventListener('click', () => {
+          const content = document.getElementById('tempo-text-content');
+          if (content) {
+            const text = content.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+              const originalText = copyTempoTextBtn.textContent;
+              copyTempoTextBtn.textContent = 'Copied!';
+              setTimeout(() => {
+                copyTempoTextBtn.textContent = originalText || 'Copy';
+              }, 2000);
+            }).catch(err => {
+              console.error('Failed to copy:', err);
+              alert('Failed to copy text to clipboard');
+            });
+          }
+        });
+      }
+
+      const fullscreenTempoBtn = document.getElementById('fullscreen-tempo-modal');
+      const tempoModalContent = document.getElementById('tempo-modal-content');
+      const viewTempoModalContainer = document.getElementById('view-tempo-modal');
+      let isFullscreen = false;
+      
+      if (fullscreenTempoBtn && tempoModalContent && viewTempoModalContainer) {
+        fullscreenTempoBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!isFullscreen) {
+            viewTempoModalContainer.style.backgroundColor = 'transparent';
+            viewTempoModalContainer.style.backdropFilter = 'none';
+            viewTempoModalContainer.classList.remove('items-center', 'justify-center');
+            
+            tempoModalContent.style.position = 'fixed';
+            tempoModalContent.style.top = '0';
+            tempoModalContent.style.left = '0';
+            tempoModalContent.style.right = '0';
+            tempoModalContent.style.bottom = '0';
+            tempoModalContent.style.width = '100vw';
+            tempoModalContent.style.height = '100vh';
+            tempoModalContent.style.maxWidth = '100vw';
+            tempoModalContent.style.maxHeight = '100vh';
+            tempoModalContent.style.margin = '0';
+            tempoModalContent.style.borderRadius = '0';
+            tempoModalContent.classList.remove('overflow-hidden');
+            tempoModalContent.style.setProperty('overflow', 'visible', 'important');
+            
+            const buttonsContainer = document.getElementById('tempo-modal-buttons');
+            if (buttonsContainer) {
+              buttonsContainer.style.display = 'flex';
+              buttonsContainer.style.visibility = 'visible';
+              buttonsContainer.style.opacity = '1';
+              buttonsContainer.style.zIndex = '100';
+              buttonsContainer.style.position = 'fixed';
+              buttonsContainer.style.top = '0';
+              buttonsContainer.style.right = '0';
+              buttonsContainer.style.paddingRight = '0.25rem';
+              buttonsContainer.style.paddingTop = '0.25rem';
+            }
+            
+            fullscreenTempoBtn.textContent = '⛶';
+            fullscreenTempoBtn.title = 'Exit Fullscreen';
+            isFullscreen = true;
+          } else {
+            viewTempoModalContainer.style.backgroundColor = '';
+            viewTempoModalContainer.style.backdropFilter = '';
+            viewTempoModalContainer.classList.add('items-center', 'justify-center');
+            
+            tempoModalContent.style.position = '';
+            tempoModalContent.style.top = '';
+            tempoModalContent.style.left = '';
+            tempoModalContent.style.right = '';
+            tempoModalContent.style.bottom = '';
+            tempoModalContent.style.width = '';
+            tempoModalContent.style.height = '';
+            tempoModalContent.style.maxWidth = '95vw';
+            tempoModalContent.style.maxHeight = '95vh';
+            tempoModalContent.style.margin = '';
+            tempoModalContent.style.borderRadius = '';
+            tempoModalContent.style.overflow = '';
+            tempoModalContent.classList.add('overflow-hidden');
+            
+            const buttonsContainer = document.getElementById('tempo-modal-buttons');
+            if (buttonsContainer) {
+              buttonsContainer.style.position = '';
+              buttonsContainer.style.top = '';
+              buttonsContainer.style.right = '';
+              buttonsContainer.style.paddingRight = '';
+              buttonsContainer.style.paddingTop = '';
+            }
+            
+            fullscreenTempoBtn.textContent = '⛶';
+            fullscreenTempoBtn.title = 'Fullscreen';
+            isFullscreen = false;
+          }
+        });
+      }
+
+      (function capHistoryTo32(){
+        var list = document.getElementById('history-list');
+        if (!list) return;
+        var items = list.querySelectorAll('.history-item');
+        for (var i = 32; i < items.length; i++) { items[i].remove(); }
+      })();
+
+      const sheetsSettingsModal = document.getElementById('sheets-settings-modal');
+      const sheetsSettingsBtn = document.getElementById('sheets-settings-btn');
+      const closeSettingsModal = document.getElementById('close-settings-modal');
+      const saveSettingsBtn = document.getElementById('save-settings');
+      const resetSettingsBtn = document.getElementById('reset-settings');
+
+      function saveSheetsSettings(settings) {
+        localStorage.setItem('sheetsSettings', JSON.stringify(settings));
+      }
+
+      function populateSettingsModal(settings) {
+        document.getElementById('setting-resilience').value = settings.resilience;
+        document.getElementById('resilience-value').textContent = settings.resilience;
+        document.getElementById('setting-place-shifted').value = settings.place_shifted_notes;
+        document.getElementById('setting-place-out-of-range').value = settings.place_out_of_range_notes;
+        document.getElementById('setting-break-lines-how').value = settings.break_lines_how;
+        document.getElementById('setting-break-lines-every').value = settings.break_lines_every;
+        document.getElementById('break-lines-value').textContent = settings.break_lines_every;
+        document.getElementById('setting-quantize').value = settings.quantize;
+        document.getElementById('quantize-value').textContent = settings.quantize;
+        document.getElementById('setting-classic-chord-order').checked = settings.classic_chord_order;
+        document.getElementById('setting-sequential-quantizes').checked = settings.sequential_quantizes;
+        document.getElementById('setting-curly-braces').checked = settings.curly_braces_for_quantized_chords;
+        document.getElementById('setting-include-out-of-range').checked = settings.include_out_of_range;
+        document.getElementById('setting-show-tempo-marks').checked = settings.show_tempo_timing_marks;
+        document.getElementById('setting-show-out-of-range-marks').checked = settings.show_out_of_range_text_marks;
+        document.getElementById('setting-out-of-range-separator').value = settings.out_of_range_separator;
+        document.getElementById('setting-show-bpm-changes').checked = settings.show_bpm_changes_as_comments;
+        document.getElementById('setting-auto-transpose').checked = settings.auto_transpose;
+      }
+
+      function getSettingsFromModal() {
+        return {
+          resilience: parseInt(document.getElementById('setting-resilience').value),
+          place_shifted_notes: document.getElementById('setting-place-shifted').value,
+          place_out_of_range_notes: document.getElementById('setting-place-out-of-range').value,
+          break_lines_how: document.getElementById('setting-break-lines-how').value,
+          break_lines_every: parseInt(document.getElementById('setting-break-lines-every').value),
+          quantize: parseInt(document.getElementById('setting-quantize').value),
+          classic_chord_order: document.getElementById('setting-classic-chord-order').checked,
+          sequential_quantizes: document.getElementById('setting-sequential-quantizes').checked,
+          curly_braces_for_quantized_chords: document.getElementById('setting-curly-braces').checked,
+          include_out_of_range: document.getElementById('setting-include-out-of-range').checked,
+          show_tempo_timing_marks: document.getElementById('setting-show-tempo-marks').checked,
+          show_out_of_range_text_marks: document.getElementById('setting-show-out-of-range-marks').checked,
+          out_of_range_separator: document.getElementById('setting-out-of-range-separator').value,
+          show_bpm_changes_as_comments: document.getElementById('setting-show-bpm-changes').checked,
+          auto_transpose: document.getElementById('setting-auto-transpose').checked,
+        };
+      }
+
+      if (sheetsSettingsBtn) {
+        sheetsSettingsBtn.addEventListener('click', () => {
+          const settings = loadSheetsSettings();
+          populateSettingsModal(settings);
+          sheetsSettingsModal.classList.remove('hidden');
+        });
+      }
+
+      if (closeSettingsModal) {
+        closeSettingsModal.addEventListener('click', () => {
+          sheetsSettingsModal.classList.add('hidden');
+        });
+      }
+
+      if (sheetsSettingsModal) {
+        sheetsSettingsModal.addEventListener('click', (e) => {
+          if (e.target === sheetsSettingsModal) {
+            sheetsSettingsModal.classList.add('hidden');
+          }
+        });
+      }
+
+      if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', () => {
+          const settings = getSettingsFromModal();
+          saveSheetsSettings(settings);
+          sheetsSettingsModal.classList.add('hidden');
+        });
+      }
+
+      if (resetSettingsBtn) {
+        resetSettingsBtn.addEventListener('click', () => {
+          if (confirm('Reset all settings to defaults?')) {
+            populateSettingsModal(defaultSheetsSettings);
+            saveSheetsSettings(defaultSheetsSettings);
+          }
+        });
+      }
+
+      document.getElementById('setting-resilience')?.addEventListener('input', (e) => {
+        document.getElementById('resilience-value').textContent = e.target.value;
+      });
+      document.getElementById('setting-break-lines-every')?.addEventListener('input', (e) => {
+        document.getElementById('break-lines-value').textContent = e.target.value;
+      });
+      document.getElementById('setting-quantize')?.addEventListener('input', (e) => {
+        document.getElementById('quantize-value').textContent = e.target.value;
+      });
+
+      const tabButtons = document.querySelectorAll('.tab-button');
+      const tabContents = document.querySelectorAll('.tab-content');
+      
+      tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const targetTab = button.getAttribute('data-tab');
+          
+          if (button.classList.contains('active')) return;
+          
+          tabButtons.forEach(btn => btn.classList.remove('active'));
+          tabContents.forEach(content => {
+            content.classList.remove('active');
+          });
+          
+          setTimeout(() => {
+            button.classList.add('active');
+            const targetContent = document.getElementById(`${targetTab}-tab`);
+            if (targetContent) {
+              targetContent.classList.add('active');
+            }
+            
+            if (targetTab === 'history') {
+              loadFullHistory();
+            }
+          }, 50);
+        });
+      });
+      
+      async function loadFullHistory() {
+        const historyList = document.getElementById('full-history-list');
+        if (!historyList) return;
+        
+        historyList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">Loading history...</div>';
+        
+        try {
+          const response = await fetch('/api/history?limit=10000');
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const history = await response.json();
+          
+          if (!history || history.length === 0) {
+            historyList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">No conversion history found.</div>';
+            return;
+          }
+          
+          historyList.innerHTML = '';
+          
+          history.forEach(item => {
+            const itemHTML = createHistoryItemHTML(item);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = itemHTML.trim();
+            const historyItemElement = tempDiv.firstElementChild;
+            if (historyItemElement) {
+              historyList.appendChild(historyItemElement);
+            }
+          });
+        } catch (error) {
+          console.error('Error loading history:', error);
+          historyList.innerHTML = `<div class="text-center text-red-400 py-6 col-span-full text-sm">Error loading history: ${error.message}</div>`;
+        }
+      }
+      
+      const refreshHistoryBtn = document.getElementById('refresh-history-btn');
+      if (refreshHistoryBtn) {
+        refreshHistoryBtn.addEventListener('click', () => {
+          loadFullHistory();
+        });
+      }
+
+    </script>
+  </body>
+</html>
