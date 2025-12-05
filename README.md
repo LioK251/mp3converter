@@ -47,7 +47,7 @@ cd audioconverter-web
 If you have an RTX 50xx series GPU, install PyTorch, torchvision, and torchaudio with CUDA 12.9 support first:
 
 ```bash
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129
+pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
 ```
 
 **Important:** All three packages (torch, torchvision, torchaudio) must be installed from the same source to ensure compatibility.
@@ -58,7 +58,7 @@ Then install the remaining dependencies (excluding torch and torchaudio):
 pip install -r requirements.txt --no-deps torch torchaudio
 ```
 
-This ensures you use the CUDA 12.9 version of PyTorch and compatible torchaudio instead of the standard versions.
+This ensures you use the CUDA 12.9 nightly version of PyTorch and compatible torchaudio instead of the standard versions.
 
 **For other GPUs or CPU-only:**
 
@@ -230,16 +230,16 @@ You can configure the application using environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SECRET_KEY` | Flask secret key for sessions | Auto-generated |
-| `MAX_CONTENT_LENGTH_MB` | Maximum upload size in MB | 25 |
 | `UPLOAD_FOLDER` | Folder for uploaded files | `uploads` |
 | `CONVERTED_FOLDER` | Folder for converted files | `converted` |
 | `FORCE_HTTPS` | Force HTTPS connections | `false` |
+
+**Note:** File size limits and rate limiting have been disabled in the current version.
 
 ### Example Configuration
 
 ```bash
 export SECRET_KEY="your-secret-key-here"
-export MAX_CONTENT_LENGTH_MB=50
 export UPLOAD_FOLDER="/path/to/uploads"
 python app.py
 ```
@@ -379,7 +379,7 @@ curl -X POST http://127.0.0.1:5000/api/convert-to-sheets \
   - Enable HTTPS with `FORCE_HTTPS=true`
   - Configure firewall rules
   - Use a reverse proxy (nginx, Apache)
-  - Implement rate limiting (already included)
+  - Consider implementing rate limiting and file size restrictions for production use
 
 ## 📝 License
 

@@ -71,7 +71,7 @@ session_cookie_samesite = "Lax"
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", os.urandom(32))
-app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH_MB", "25")) * 1024 * 1024
+# app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH_MB", "25")) * 1024 * 1024
 
 ALLOWED_EXTENSIONS = {"mp3"}
 UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "uploads")
@@ -144,7 +144,7 @@ else:
         session_cookie_samesite='Lax',
     )
 
-limiter = Limiter(get_remote_address, app=app, default_limits=['60/minute'])
+# limiter = Limiter(get_remote_address, app=app, default_limits=['60/minute'])
 
 handler = RotatingFileHandler('app.log', maxBytes=5_000_000, backupCount=3)
 handler.setLevel(logging.INFO)
@@ -997,7 +997,7 @@ def inject_system_info():
     return {"system_info": get_system_info()}
 
 @app.route("/", methods=["GET", "POST"])
-@limiter.limit("20/minute")
+# @limiter.limit("20/minute")
 def upload_file():
     video_id = None
     conversion_time = None
@@ -1274,15 +1274,15 @@ def api_options(path):
     return response
 
 
-@app.errorhandler(413)
-def too_large(_):
-    flash("File too large")
-    return render_template("index.html", **({"history": prepare_history_for_ui(load_history())} if "prepare_history_for_ui" in globals() else {})), 413
+# @app.errorhandler(413)
+# def too_large(_):
+#     flash("File too large")
+#     return render_template("index.html", **({"history": prepare_history_for_ui(load_history())} if "prepare_history_for_ui" in globals() else {})), 413
 
-@app.errorhandler(429)
-def too_many(_):
-    flash("Too many requests, try later")
-    return render_template("index.html", **({"history": prepare_history_for_ui(load_history())} if "prepare_history_for_ui" in globals() else {})), 429
+# @app.errorhandler(429)
+# def too_many(_):
+#     flash("Too many requests, try later")
+#     return render_template("index.html", **({"history": prepare_history_for_ui(load_history())} if "prepare_history_for_ui" in globals() else {})), 429
 
 conversion_tasks = {}
 task_results = {}
@@ -1450,7 +1450,7 @@ def api_health():
 
 @csrf.exempt
 @app.route("/api/convert", methods=["POST"])
-@limiter.limit("10/minute")
+# @limiter.limit("10/minute")
 def api_convert():
     """API endpoint for video conversion"""
     try:
@@ -1561,7 +1561,7 @@ def api_history():
 
 @csrf.exempt
 @app.route("/api/history/delete", methods=["POST"])
-@limiter.limit("30/minute")
+# @limiter.limit("30/minute")
 def api_delete_history():
     try:
         data = request.get_json()
