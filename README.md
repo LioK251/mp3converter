@@ -279,6 +279,18 @@ audioconverter-web/
 ├── midi_to_sheets.py     # MIDI to QWERTY sheet converter
 ├── requirements.txt      # Python dependencies
 ├── cookies.txt          # YouTube cookies file (optional)
+├── utils/               # Utility modules
+│   ├── __init__.py
+│   └── system_info.py   # System information detection (CPU/GPU)
+├── static/              # Static assets
+│   └── js/              # JavaScript modules
+│       ├── device.js
+│       ├── settings.js
+│       ├── sheets-utils.js
+│       ├── history.js
+│       ├── conversion.js
+│       ├── sheets-viewer.js
+│       └── ui.js
 ├── templates/
 │   ├── index.html       # Web interface
 │   ├── icon.ico         # Application icon
@@ -286,7 +298,6 @@ audioconverter-web/
 ├── uploads/             # Uploaded files directory
 ├── converted/           # Converted files directory
 ├── transkun/           # Transkun transcription module
-├── resources/          # Model files and resources
 └── history.json        # Conversion history (auto-generated)
 ```
 
