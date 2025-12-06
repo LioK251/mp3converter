@@ -541,3 +541,81 @@ document.addEventListener('click', function(event) {
     }
   }
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+  let dragCounter = 0;
+  
+  document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter++;
+    
+    const files = Array.from(e.dataTransfer.files || []);
+    const hasMidiFiles = files.some(file => {
+      const ext = file.name.split('.').pop().toLowerCase();
+      return ext === 'mid' || ext === 'midi';
+    });
+    
+    if (hasMidiFiles) {
+      document.body.style.border = '3px dashed #9333ea';
+      document.body.style.backgroundColor = 'rgba(147, 51, 234, 0.1)';
+    }
+  });
+  
+  document.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter--;
+    
+    if (dragCounter === 0) {
+      document.body.style.border = '';
+      document.body.style.backgroundColor = '';
+    }
+  });
+  
+  document.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter = 0;
+    document.body.style.border = '';
+    document.body.style.backgroundColor = '';
+    
+    const files = Array.from(e.dataTransfer.files);
+    const midiFiles = files.filter(file => {
+      const ext = file.name.split('.').pop().toLowerCase();
+      return ext === 'mid' || ext === 'midi';
+    });
+    
+    if (midiFiles.length === 0) {
+      return;
+    }
+    
+    for (const file of midiFiles) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const uploadResponse = await fetch('/api/upload-midi', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!uploadResponse.ok) {
+          const error = await uploadResponse.json();
+          throw new Error(error.error || 'Upload failed');
+        }
+        
+        const uploadData = await uploadResponse.json();
+        
+        if (typeof viewTempoText === 'function') {
+          const fileName = file.name.replace(/\.(mid|midi)$/i, '');
+          viewTempoText(uploadData.midi_filename, fileName);
+        }
+        
+      } catch (error) {
+        console.error('Error processing MIDI file:', error);
+        showAlert(`Failed to process ${file.name}: ${error.message}`, 'Error');
+      }
+    }
+  });
+});

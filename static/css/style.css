@@ -362,3 +362,16 @@ iframe:hover {
     opacity: 1;
     transform: translateY(0);
 }
+#tempo-text-content.text-center {
+    text-align: center;
+}
+#tempo-text-content.text-center > * {
+    display: inline-block;
+    text-align: left;
+}
+#tempo-modal-header {
+    background: transparent;
+}
+#tempo-modal-title {
+    padding: 0 1rem;
+}

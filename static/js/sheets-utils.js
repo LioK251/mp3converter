@@ -1,13 +1,13 @@
 const tempoColors = {
-  long: '#a3f0a3',
-  quadruple: '#a3f0a3',
-  whole: '#74da74',
-  half: '#9ada5a',
-  quarter: '#c0c05a',
-  eighth: '#da7e5a',
-  sixteenth: '#daa6a6',
-  thirtysecond: '#ff1900',
-  sixtyfourth: '#9c0f00'
+  long: '#ffa500',
+  quadruple: '#ffa500',
+  whole: '#ffa500',
+  half: '#ffa500',
+  quarter: '#ffa500',
+  eighth: '#ffa500',
+  sixteenth: '#ffa500',
+  thirtysecond: '#ffa500',
+  sixtyfourth: '#ffa500'
 };
 
 function separator(beat, difference) {
@@ -196,8 +196,14 @@ function colorizeTempoText(text) {
       
       for (let j = chordStart; j < chordEnd && j < line.length; j++) {
         const char = line[j];
-        const color = charColors[j] || tempoColors.long;
+        let color = charColors[j] || tempoColors.long;
         const escaped = char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        
+        if (/[0-9]/.test(char)) {
+          color = '#ffff00';
+        } else if (/[a-zA-Z\[\]]/.test(char)) {
+          color = '#ffa500';
+        }
         
         if (isOutOfRange[j]) {
           result += `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em; text-stroke: 0.5px ${color}; -webkit-text-stroke: 0.5px ${color};">${escaped}</span>`;
@@ -215,8 +221,14 @@ function colorizeTempoText(text) {
       result += '<span class="chord-block svelte-1l3km4k">';
       for (let i = chordStart; i < line.length; i++) {
         const char = line[i];
-        const color = charColors[i] || tempoColors.long;
+        let color = charColors[i] || tempoColors.long;
         const escaped = char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        
+        if (/[0-9]/.test(char)) {
+          color = '#ffff00';
+        } else if (/[a-zA-Z\[\]]/.test(char)) {
+          color = '#ffa500';
+        }
         
         if (isOutOfRange[i]) {
           result += `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em;">${escaped}</span>`;
@@ -231,8 +243,14 @@ function colorizeTempoText(text) {
       result += '<span class="chord-block svelte-1l3km4k">';
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
-        const color = charColors[i] || tempoColors.long;
+        let color = charColors[i] || tempoColors.long;
         const escaped = char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        
+        if (/[0-9]/.test(char)) {
+          color = '#ffff00';
+        } else if (/[a-zA-Z\[\]]/.test(char)) {
+          color = '#ffa500';
+        }
         
         if (isOutOfRange[i]) {
           result += `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em;">${escaped}</span>`;
@@ -248,4 +266,3 @@ function colorizeTempoText(text) {
   
   return result;
 }
-

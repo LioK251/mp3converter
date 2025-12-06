@@ -69,6 +69,29 @@ def main():
     
     print("Server started! Opening window...")
     
+    import json
+    
+    SETTINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sheets_settings.json')
+    
+    def save_settings(settings_json):
+        try:
+            with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+                f.write(settings_json)
+            return True
+        except Exception as e:
+            print(f"Error saving settings: {e}")
+            return False
+    
+    def load_settings():
+        try:
+            if os.path.exists(SETTINGS_FILE):
+                with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                    return f.read()
+            return None
+        except Exception as e:
+            print(f"Error loading settings: {e}")
+            return None
+    
     window = webview.create_window(
         'MP3 → MIDI CONVERTER',
         'http://127.0.0.1:5000/',
@@ -79,6 +102,10 @@ def main():
         fullscreen=False,
         on_top=ENABLE_TOPMOST,
         text_select=True,
+        js_api={
+            'save_settings': save_settings,
+            'load_settings': load_settings,
+        }
     )
     
     def set_window_topmost():

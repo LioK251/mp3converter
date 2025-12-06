@@ -14,13 +14,29 @@ const defaultSheetsSettings = {
   out_of_range_separator: ':',
   show_bpm_changes_as_comments: true,
   auto_transpose: true,
+  center_sheet_text: false,
 };
 
 function loadSheetsSettings() {
-  const saved = localStorage.getItem('sheetsSettings');
+  let saved = null;
+  try {
+    saved = localStorage.getItem('sheetsSettings');
+  } catch (e) {
+    console.warn('localStorage not available, trying pywebview:', e);
+  }
+  
+  if (!saved && window.pywebview) {
+    try {
+      saved = window.pywebview.api.load_settings();
+    } catch (e) {
+      console.warn('Failed to load settings via pywebview:', e);
+    }
+  }
+  
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
+      return { ...defaultSheetsSettings, ...parsed };
     } catch (e) {
       console.error('Failed to parse saved settings:', e);
     }
@@ -29,7 +45,21 @@ function loadSheetsSettings() {
 }
 
 function saveSheetsSettings(settings) {
-  localStorage.setItem('sheetsSettings', JSON.stringify(settings));
+  try {
+    localStorage.setItem('sheetsSettings', JSON.stringify(settings));
+    if (window.pywebview) {
+      window.pywebview.api.save_settings(JSON.stringify(settings));
+    }
+  } catch (e) {
+    console.error('Failed to save settings:', e);
+    if (window.pywebview) {
+      try {
+        window.pywebview.api.save_settings(JSON.stringify(settings));
+      } catch (err) {
+        console.error('Failed to save settings via pywebview:', err);
+      }
+    }
+  }
 }
 
 function populateSettingsModal(settings) {
@@ -51,6 +81,7 @@ function populateSettingsModal(settings) {
   document.getElementById('setting-out-of-range-separator').value = settings.out_of_range_separator;
   document.getElementById('setting-show-bpm-changes').checked = settings.show_bpm_changes_as_comments;
   document.getElementById('setting-auto-transpose').checked = settings.auto_transpose;
+  document.getElementById('setting-center-sheet-text').checked = settings.center_sheet_text || false;
 }
 
 function getSettingsFromModal() {
@@ -70,6 +101,7 @@ function getSettingsFromModal() {
     out_of_range_separator: document.getElementById('setting-out-of-range-separator').value,
     show_bpm_changes_as_comments: document.getElementById('setting-show-bpm-changes').checked,
     auto_transpose: document.getElementById('setting-auto-transpose').checked,
+    center_sheet_text: document.getElementById('setting-center-sheet-text').checked,
   };
 }
 
@@ -127,4 +159,9 @@ document.getElementById('setting-break-lines-every')?.addEventListener('input', 
 });
 document.getElementById('setting-quantize')?.addEventListener('input', (e) => {
   document.getElementById('quantize-value').textContent = e.target.value;
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const settings = loadSheetsSettings();
+  populateSettingsModal(settings);
 });

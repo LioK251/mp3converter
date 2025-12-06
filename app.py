@@ -51,6 +51,7 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", os.urandom(32))
 
 ALLOWED_EXTENSIONS = {"mp3"}
+ALLOWED_MIDI_EXTENSIONS = {"mid", "midi"}
 UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "uploads")
 CONVERTED_FOLDER = os.environ.get("CONVERTED_FOLDER", "converted")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -1286,6 +1287,40 @@ def api_convert_to_sheets():
         return jsonify({"error": str(e)}), 500
 
 @csrf.exempt
+@app.route("/api/upload-midi", methods=["POST"])
+def api_upload_midi():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        filename = file.filename
+        file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+        
+        if file_ext not in ALLOWED_MIDI_EXTENSIONS:
+            return jsonify({"error": f"Invalid file type. Allowed: {', '.join(ALLOWED_MIDI_EXTENSIONS)}"}), 400
+        
+        secure_name = secure_filename(filename)
+        timestamp = int(time.time())
+        base_name = os.path.splitext(secure_name)[0]
+        midi_filename = f"{base_name}_{timestamp}.mid"
+        midi_path = os.path.join(app.config['CONVERTED_FOLDER'], midi_filename)
+        
+        file.save(midi_path)
+        
+        return jsonify({
+            "success": True,
+            "midi_filename": midi_filename,
+            "message": "MIDI file uploaded successfully"
+        })
+    except Exception as e:
+        logger.error(f"Upload MIDI error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@csrf.exempt
 @app.route("/history.json", methods=["GET"])
 def serve_history_json():
     ensure_history_file()
@@ -1307,4 +1342,3 @@ if __name__ == "__main__":
     
     Timer(1.5, open_browser).start()
     app.run(host='127.0.0.1', port=5000)
-

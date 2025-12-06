@@ -73,14 +73,35 @@ if (copyTransposesBtn) {
   });
 }
 
-async function viewTempoText(midiFilename) {
+window.viewTempoText = async function(midiFilename, title = null) {
   const modal = document.getElementById('view-tempo-modal');
   const content = document.getElementById('tempo-text-content');
+  const titleElement = document.getElementById('tempo-modal-title');
   
-  if (!modal || !content) return;
+  if (!modal) {
+    console.error('Modal element not found');
+    return;
+  }
+  if (!content) {
+    console.error('Content element not found');
+    return;
+  }
   
+  console.log('Opening sheet viewer for:', midiFilename);
   currentMidiFilename = midiFilename;
   modal.classList.remove('hidden');
+  
+  if (titleElement) {
+    let displayTitle = '';
+    if (title) {
+      displayTitle = title;
+    } else {
+      displayTitle = midiFilename.replace(/_/g, ' ').replace(/\.mid$/i, '');
+    }
+    displayTitle = displayTitle.replace(/\btranskun\b/gi, '').replace(/\s+/g, ' ').trim();
+    titleElement.textContent = displayTitle;
+  }
+  
   content.innerHTML = '<div class="text-center text-gray-400">Loading sheet text...</div>';
   
   try {
@@ -113,6 +134,14 @@ async function viewTempoText(midiFilename) {
     if (data.success && data.sheet_text !== undefined && data.sheet_text !== null) {
       const coloredText = colorizeTempoText(data.sheet_text);
       content.innerHTML = coloredText;
+      
+      const settings = loadSheetsSettings();
+      if (settings.center_sheet_text) {
+        content.classList.add('text-center');
+      } else {
+        content.classList.remove('text-center');
+      }
+      
       if (typeof updateTransposeModeButton === 'function') {
         updateTransposeModeButton();
       }
@@ -185,17 +214,13 @@ if (fullscreenTempoBtn && tempoModalContent && viewTempoModalContainer) {
       tempoModalContent.classList.remove('overflow-hidden');
       tempoModalContent.style.setProperty('overflow', 'visible', 'important');
       
-      const buttonsContainer = document.getElementById('tempo-modal-buttons');
-      if (buttonsContainer) {
-        buttonsContainer.style.display = 'flex';
-        buttonsContainer.style.visibility = 'visible';
-        buttonsContainer.style.opacity = '1';
-        buttonsContainer.style.zIndex = '100';
-        buttonsContainer.style.position = 'fixed';
-        buttonsContainer.style.top = '0';
-        buttonsContainer.style.right = '0';
-        buttonsContainer.style.paddingRight = '0.25rem';
-        buttonsContainer.style.paddingTop = '0.25rem';
+      const headerContainer = document.getElementById('tempo-modal-header');
+      if (headerContainer) {
+        headerContainer.style.position = 'fixed';
+        headerContainer.style.top = '0';
+        headerContainer.style.left = '0';
+        headerContainer.style.right = '0';
+        headerContainer.style.zIndex = '100';
       }
       
       fullscreenTempoBtn.textContent = '⛶';
@@ -220,13 +245,13 @@ if (fullscreenTempoBtn && tempoModalContent && viewTempoModalContainer) {
       tempoModalContent.style.overflow = '';
       tempoModalContent.classList.add('overflow-hidden');
       
-      const buttonsContainer = document.getElementById('tempo-modal-buttons');
-      if (buttonsContainer) {
-        buttonsContainer.style.position = '';
-        buttonsContainer.style.top = '';
-        buttonsContainer.style.right = '';
-        buttonsContainer.style.paddingRight = '';
-        buttonsContainer.style.paddingTop = '';
+      const headerContainer = document.getElementById('tempo-modal-header');
+      if (headerContainer) {
+        headerContainer.style.position = '';
+        headerContainer.style.top = '';
+        headerContainer.style.left = '';
+        headerContainer.style.right = '';
+        headerContainer.style.zIndex = '';
       }
       
       fullscreenTempoBtn.textContent = '⛶';
