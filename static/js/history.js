@@ -15,6 +15,7 @@ function addToHistory(resultData) {
       download_url: resultData.download_url,
       conversion_time: resultData.conversion_time,
       library: resultData.library || 'Transkun',
+      timestamp: resultData.timestamp || Date.now() / 1000,
     };
     
     const itemHTML = createHistoryItemHTML(historyItem);
@@ -202,8 +203,22 @@ function displayHistoryItems(items) {
   const historyList = document.getElementById('full-history-list');
   if (!historyList) return;
   
+  const isCurrentlyHidden = historyList.style.opacity === '0';
+  
+  if (!isCurrentlyHidden) {
+    historyList.style.opacity = '0';
+    historyList.style.transition = 'opacity 0.2s ease-in-out';
+  }
+  
   if (!items || items.length === 0) {
     historyList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">No conversion history found.</div>';
+    if (!isCurrentlyHidden) {
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          historyList.style.opacity = '1';
+        });
+      }, 200);
+    }
     return;
   }
   
@@ -218,13 +233,30 @@ function displayHistoryItems(items) {
       historyList.appendChild(historyItemElement);
     }
   });
+  
+  if (!isCurrentlyHidden) {
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        historyList.style.opacity = '1';
+      });
+    }, 200);
+  }
 }
 
 async function loadFullHistory() {
   const historyList = document.getElementById('full-history-list');
   if (!historyList) return;
   
-  historyList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">Loading history...</div>';
+  const wasAlreadyFading = historyList.style.opacity === '0';
+  
+  if (!wasAlreadyFading) {
+    historyList.style.opacity = '0';
+    historyList.style.transition = 'opacity 0.2s ease-in-out';
+  }
+  
+  if (!wasAlreadyFading) {
+    historyList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">Loading history...</div>';
+  }
   
   try {
     const response = await fetch('/api/history?limit=10000');
@@ -241,16 +273,76 @@ async function loadFullHistory() {
     } else {
       displayHistoryItems(fullHistoryData);
     }
+    
+    if (wasAlreadyFading) {
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          historyList.style.opacity = '1';
+        });
+      }, 200);
+    } else {
+      requestAnimationFrame(() => {
+        historyList.style.opacity = '1';
+      });
+    }
   } catch (error) {
     console.error('Error loading history:', error);
     historyList.innerHTML = `<div class="text-center text-red-400 py-6 col-span-full text-sm">Error loading history: ${error.message}</div>`;
+    
+    if (wasAlreadyFading) {
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          historyList.style.opacity = '1';
+        });
+      }, 200);
+    } else {
+      requestAnimationFrame(() => {
+        historyList.style.opacity = '1';
+      });
+    }
   }
 }
 
 const refreshHistoryBtn = document.getElementById('refresh-history-btn');
 if (refreshHistoryBtn) {
-  refreshHistoryBtn.addEventListener('click', () => {
-    loadFullHistory();
+  refreshHistoryBtn.addEventListener('click', async () => {
+    const historyList = document.getElementById('full-history-list');
+    if (!historyList) {
+      loadFullHistory();
+      return;
+    }
+    
+    historyList.style.opacity = '0';
+    historyList.style.transition = 'opacity 0.2s ease-in-out';
+    
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    try {
+      const response = await fetch('/api/history?limit=10000');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const history = await response.json();
+      fullHistoryData = history || [];
+      
+      const searchInput = document.getElementById('history-search-input');
+      if (searchInput && searchInput.value.trim()) {
+        filterHistoryItems(searchInput.value);
+      } else {
+        displayHistoryItems(fullHistoryData);
+      }
+      
+      requestAnimationFrame(() => {
+        historyList.style.opacity = '1';
+      });
+    } catch (error) {
+      console.error('Error loading history:', error);
+      historyList.innerHTML = `<div class="text-center text-red-400 py-6 col-span-full text-sm">Error loading history: ${error.message}</div>`;
+      requestAnimationFrame(() => {
+        historyList.style.opacity = '1';
+      });
+    }
   });
 }
 
@@ -270,15 +362,25 @@ if (historySearchInput) {
 
 async function setupDeleteButtons() {
   document.querySelectorAll('.delete-history-btn').forEach(btn => {
+    if (btn.hasAttribute('data-listener-attached')) {
+      return;
+    }
+    btn.setAttribute('data-listener-attached', 'true');
+    
     btn.addEventListener('click', async function(e) {
       e.stopPropagation();
       const timestamp = this.getAttribute('data-timestamp');
-      if (!timestamp) return;
+      if (!timestamp || timestamp === '') {
+        showAlert('Cannot delete: missing timestamp', 'Error');
+        return;
+      }
       
       const confirmed = await showConfirm('Are you sure you want to delete this history item?', 'Delete History Item');
       if (!confirmed) {
         return;
       }
+      
+      const historyItem = this.closest('.history-item');
       
       try {
         const response = await fetch('/api/history/delete', {
@@ -289,11 +391,33 @@ async function setupDeleteButtons() {
           body: JSON.stringify({ timestamp: parseFloat(timestamp) })
         });
         
+        const responseData = await response.json();
+        
         if (!response.ok) {
-          throw new Error('Failed to delete history item');
+          if (response.status === 404) {
+            historyItem.remove();
+            const historyList = document.getElementById('history-list');
+            const fullHistoryList = document.getElementById('full-history-list');
+            
+            if (historyList) {
+              const items = historyList.querySelectorAll('.history-item');
+              if (items.length === 0) {
+                historyList.innerHTML = '<div class="text-gray-400 text-sm">Nothing here yet. Convert something first.</div>';
+              }
+            }
+            
+            if (fullHistoryList) {
+              const items = fullHistoryList.querySelectorAll('.history-item');
+              if (items.length === 0) {
+                fullHistoryList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">No conversion history found.</div>';
+              }
+            }
+            return;
+          }
+          throw new Error(responseData.error || 'Failed to delete history item');
         }
         
-        this.closest('.history-item').remove();
+        historyItem.remove();
         
         const historyList = document.getElementById('history-list');
         const fullHistoryList = document.getElementById('full-history-list');

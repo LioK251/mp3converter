@@ -89,7 +89,6 @@ window.viewTempoText = async function(midiFilename, title = null) {
   
   console.log('Opening sheet viewer for:', midiFilename);
   currentMidiFilename = midiFilename;
-  modal.classList.remove('hidden');
   
   if (titleElement) {
     let displayTitle = '';
@@ -103,6 +102,10 @@ window.viewTempoText = async function(midiFilename, title = null) {
   }
   
   content.innerHTML = '<div class="text-center text-gray-400">Loading sheet text...</div>';
+  
+  modal.classList.remove('hidden');
+  modal.style.opacity = '0';
+  modal.style.transition = 'opacity 0.2s ease-in-out';
   
   try {
     const savedSettings = loadSheetsSettings();
@@ -145,6 +148,10 @@ window.viewTempoText = async function(midiFilename, title = null) {
       if (typeof updateTransposeModeButton === 'function') {
         updateTransposeModeButton();
       }
+      
+      requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+      });
     } else {
       console.error('Missing sheet_text or success flag. Response:', data);
       throw new Error(data.error || 'Failed to load sheet text');
@@ -152,6 +159,9 @@ window.viewTempoText = async function(midiFilename, title = null) {
   } catch (error) {
     console.error('Convert to QWERTY error:', error);
     content.innerHTML = `<div class="text-center text-red-400">Error: ${error.message}</div>`;
+    requestAnimationFrame(() => {
+      modal.style.opacity = '1';
+    });
   }
 }
 
@@ -161,7 +171,15 @@ const copyTempoTextBtn = document.getElementById('copy-tempo-text');
 
 if (closeTempoModal) {
   closeTempoModal.addEventListener('click', () => {
-    if (viewTempoModal) viewTempoModal.classList.add('hidden');
+    if (viewTempoModal) {
+      viewTempoModal.style.opacity = '0';
+      viewTempoModal.style.transition = 'opacity 0.2s ease-in-out';
+      setTimeout(() => {
+        viewTempoModal.classList.add('hidden');
+        viewTempoModal.style.opacity = '';
+        viewTempoModal.style.transition = '';
+      }, 200);
+    }
   });
 }
 
@@ -195,64 +213,89 @@ let isFullscreen = false;
 if (fullscreenTempoBtn && tempoModalContent && viewTempoModalContainer) {
   fullscreenTempoBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    
     if (!isFullscreen) {
-      viewTempoModalContainer.style.backgroundColor = 'transparent';
-      viewTempoModalContainer.style.backdropFilter = 'none';
-      viewTempoModalContainer.classList.remove('items-center', 'justify-center');
+      const rect = tempoModalContent.getBoundingClientRect();
+      const currentLeft = rect.left;
+      const currentTop = rect.top;
+      const currentWidth = rect.width;
+      const currentHeight = rect.height;
       
       tempoModalContent.style.position = 'fixed';
-      tempoModalContent.style.top = '0';
-      tempoModalContent.style.left = '0';
-      tempoModalContent.style.right = '0';
-      tempoModalContent.style.bottom = '0';
-      tempoModalContent.style.width = '100vw';
-      tempoModalContent.style.height = '100vh';
-      tempoModalContent.style.maxWidth = '100vw';
-      tempoModalContent.style.maxHeight = '100vh';
+      tempoModalContent.style.left = `${currentLeft}px`;
+      tempoModalContent.style.top = `${currentTop}px`;
+      tempoModalContent.style.width = `${currentWidth}px`;
+      tempoModalContent.style.height = `${currentHeight}px`;
       tempoModalContent.style.margin = '0';
-      tempoModalContent.style.borderRadius = '0';
-      tempoModalContent.classList.remove('overflow-hidden');
-      tempoModalContent.style.setProperty('overflow', 'visible', 'important');
+      tempoModalContent.style.willChange = 'width, height, left, top, right, bottom';
+      viewTempoModalContainer.style.willChange = 'background-color, backdrop-filter';
       
       const headerContainer = document.getElementById('tempo-modal-header');
       if (headerContainer) {
-        headerContainer.style.position = 'fixed';
-        headerContainer.style.top = '0';
-        headerContainer.style.left = '0';
-        headerContainer.style.right = '0';
-        headerContainer.style.zIndex = '100';
+        headerContainer.style.willChange = 'position, top, left, right';
       }
+      
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          viewTempoModalContainer.classList.add('fullscreen-mode');
+          tempoModalContent.classList.add('fullscreen-mode');
+          if (headerContainer) {
+            headerContainer.classList.add('fullscreen-mode');
+          }
+        });
+      });
+      
+      setTimeout(() => {
+        if (headerContainer) {
+          headerContainer.style.willChange = '';
+        }
+      }, 300);
+      
+      setTimeout(() => {
+        tempoModalContent.style.willChange = '';
+        viewTempoModalContainer.style.willChange = '';
+      }, 300);
       
       fullscreenTempoBtn.textContent = '⛶';
       fullscreenTempoBtn.title = 'Exit Fullscreen';
       isFullscreen = true;
     } else {
-      viewTempoModalContainer.style.backgroundColor = '';
-      viewTempoModalContainer.style.backdropFilter = '';
-      viewTempoModalContainer.classList.add('items-center', 'justify-center');
+      tempoModalContent.style.willChange = 'width, height, left, top, right, bottom';
+      viewTempoModalContainer.style.willChange = 'background-color, backdrop-filter';
       
-      tempoModalContent.style.position = '';
-      tempoModalContent.style.top = '';
-      tempoModalContent.style.left = '';
-      tempoModalContent.style.right = '';
-      tempoModalContent.style.bottom = '';
-      tempoModalContent.style.width = '';
-      tempoModalContent.style.height = '';
-      tempoModalContent.style.maxWidth = '95vw';
-      tempoModalContent.style.maxHeight = '95vh';
-      tempoModalContent.style.margin = '';
-      tempoModalContent.style.borderRadius = '';
-      tempoModalContent.style.overflow = '';
-      tempoModalContent.classList.add('overflow-hidden');
+      viewTempoModalContainer.classList.add('items-center', 'justify-center');
       
       const headerContainer = document.getElementById('tempo-modal-header');
       if (headerContainer) {
-        headerContainer.style.position = '';
-        headerContainer.style.top = '';
-        headerContainer.style.left = '';
-        headerContainer.style.right = '';
-        headerContainer.style.zIndex = '';
+        headerContainer.style.willChange = 'position, top, left, right';
       }
+      
+      requestAnimationFrame(() => {
+        viewTempoModalContainer.classList.remove('fullscreen-mode');
+        tempoModalContent.classList.remove('fullscreen-mode');
+        if (headerContainer) {
+          headerContainer.classList.remove('fullscreen-mode');
+        }
+      });
+      
+      setTimeout(() => {
+        if (headerContainer) {
+          headerContainer.style.willChange = '';
+        }
+      }, 300);
+      
+      setTimeout(() => {
+        tempoModalContent.style.position = '';
+        tempoModalContent.style.left = '';
+        tempoModalContent.style.top = '';
+        tempoModalContent.style.width = '';
+        tempoModalContent.style.height = '';
+        tempoModalContent.style.margin = '';
+        tempoModalContent.style.right = '';
+        tempoModalContent.style.bottom = '';
+        tempoModalContent.style.willChange = '';
+        viewTempoModalContainer.style.willChange = '';
+      }, 300);
       
       fullscreenTempoBtn.textContent = '⛶';
       fullscreenTempoBtn.title = 'Fullscreen';

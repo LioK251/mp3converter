@@ -115,20 +115,38 @@ if (sheetsSettingsBtn) {
   sheetsSettingsBtn.addEventListener('click', () => {
     const settings = loadSheetsSettings();
     populateSettingsModal(settings);
+    sheetsSettingsModal.style.opacity = '0';
+    sheetsSettingsModal.querySelector('div').style.transform = 'scale(0.95)';
     sheetsSettingsModal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      sheetsSettingsModal.style.opacity = '1';
+      sheetsSettingsModal.querySelector('div').style.transform = 'scale(1)';
+    });
   });
 }
 
 if (closeSettingsModal) {
   closeSettingsModal.addEventListener('click', () => {
-    sheetsSettingsModal.classList.add('hidden');
+    sheetsSettingsModal.style.opacity = '0';
+    sheetsSettingsModal.querySelector('div').style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      sheetsSettingsModal.classList.add('hidden');
+      sheetsSettingsModal.style.opacity = '';
+      sheetsSettingsModal.querySelector('div').style.transform = '';
+    }, 200);
   });
 }
 
 if (sheetsSettingsModal) {
   sheetsSettingsModal.addEventListener('click', (e) => {
     if (e.target === sheetsSettingsModal) {
-      sheetsSettingsModal.classList.add('hidden');
+      sheetsSettingsModal.style.opacity = '0';
+      sheetsSettingsModal.querySelector('div').style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        sheetsSettingsModal.classList.add('hidden');
+        sheetsSettingsModal.style.opacity = '';
+        sheetsSettingsModal.querySelector('div').style.transform = '';
+      }, 200);
     }
   });
 }
@@ -137,7 +155,13 @@ if (saveSettingsBtn) {
   saveSettingsBtn.addEventListener('click', () => {
     const settings = getSettingsFromModal();
     saveSheetsSettings(settings);
-    sheetsSettingsModal.classList.add('hidden');
+    sheetsSettingsModal.style.opacity = '0';
+    sheetsSettingsModal.querySelector('div').style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      sheetsSettingsModal.classList.add('hidden');
+      sheetsSettingsModal.style.opacity = '';
+      sheetsSettingsModal.querySelector('div').style.transform = '';
+    }, 200);
   });
 }
 

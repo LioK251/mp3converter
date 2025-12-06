@@ -717,7 +717,7 @@ def upload_file():
             try:
                 if source == 'youtube':
                     cookiefile = "cookies.txt" if os.path.exists("cookies.txt") else None
-                    m = re.search(r"(?:v=|youtu\.be/)([\w-]{11})", url)
+                    m = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", url)
                     if m:
                         video_id = m.group(1)
                     mp3_path, video_title, thumbnail_url = download_mp3_from_youtube(
@@ -934,7 +934,7 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
             
             if source == 'youtube':
                 cookiefile = "cookies.txt" if os.path.exists("cookies.txt") else None
-                m = re.search(r"(?:v=|youtu\.be/)([\w-]{11})", url)
+                m = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", url)
                 if m:
                     video_id = m.group(1)
                 mp3_path, video_title, thumbnail_url = download_mp3_from_youtube(
@@ -1052,7 +1052,9 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
                 "type": source,
                 "youtube_url": url if source == 'youtube' else None,
                 "tiktok_url": url if source == 'tiktok' else None,
+                "discord_url": url if source == 'discord' else None,
                 "library": output_library,
+                "timestamp": time.time(),
             }
             conversion_tasks[task_id] = {"status": "completed"}
             
@@ -1139,6 +1141,7 @@ def api_status(task_id):
             "tiktok_url": result.get("tiktok_url"),
             "discord_url": result.get("discord_url"),
             "library": result.get("library"),
+            "timestamp": result.get("timestamp"),
         })
     elif task_status.get("status") == "error":
         return jsonify({
@@ -1210,10 +1213,11 @@ def api_delete_history():
             history = []
         
         original_length = len(history)
-        history = [item for item in history if abs(item.get("timestamp", 0) - float(timestamp)) > 0.001]
+        timestamp_float = float(timestamp)
+        history = [item for item in history if abs(item.get("timestamp", 0) - timestamp_float) > 0.001]
         
         if len(history) == original_length:
-            return jsonify({"error": "History item not found"}), 404
+            return jsonify({"status": "success", "message": "History item deleted (or not found in file)"}), 200
         
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=2)

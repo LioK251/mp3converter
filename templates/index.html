@@ -10,7 +10,7 @@
   <body class="text-gray-200 min-h-screen flex items-center justify-center">
     <div class="w-full max-w-6xl mx-auto px-4 py-8">
       {% if system_info %}
-      <div class="bg-gray-800/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-700 hover-effect mb-6">
+      <div id="system-info-box" class="bg-gray-800/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-700 hover-effect mb-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div class="flex items-center gap-2">
             <span class="text-gray-400 text-sm font-semibold min-w-[60px]">Host:</span>
@@ -398,11 +398,11 @@
         <div id="tempo-modal-header" class="absolute top-0 left-0 right-0 z-[100] flex items-center justify-between px-2 py-1" style="pointer-events: auto;">
           <div id="tempo-modal-title" class="text-gray-400 font-semibold text-center flex-1" style="font-size: clamp(0.65rem, 1.2vw, 0.875rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
           <div id="tempo-modal-buttons" class="flex items-center gap-2" style="pointer-events: auto;">
-            <button id="transpose-mode-toggle" class="text-gray-400 hover:text-white text-xs px-2 py-1 rounded" style="background: transparent; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto; border: none;" title="Toggle between Auto and Multi transpose mode">Transpose Mode: Auto</button>
-            <button id="copy-transposes-btn" class="text-gray-400 hover:text-white text-xs hidden" style="background: transparent; border: none; padding: 0; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: none; align-items: center; justify-content: center; pointer-events: auto;">Copy Transposes</button>
-            <button id="copy-tempo-text" class="text-gray-400 hover:text-white text-xs" style="background: transparent; border: none; padding: 0; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;">Copy</button>
-            <button id="fullscreen-tempo-modal" class="text-gray-400 hover:text-white text-sm" style="background: transparent; border: none; padding: 0; cursor: pointer; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;" title="Fullscreen">⛶</button>
-            <button id="close-tempo-modal" class="text-gray-400 hover:text-white text-xl" style="background: transparent; border: none; padding: 0; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;">X;</button>
+          <button id="transpose-mode-toggle" class="text-gray-400 hover:text-white text-xs px-2 py-1 rounded" style="background: transparent; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto; border: none;" title="Toggle between Auto and Multi transpose mode">Transpose Mode: Auto</button>
+          <button id="copy-transposes-btn" class="text-gray-400 hover:text-white text-xs hidden" style="background: transparent; border: none; padding: 0; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: none; align-items: center; justify-content: center; pointer-events: auto;">Copy Transposes</button>
+          <button id="copy-tempo-text" class="text-gray-400 hover:text-white text-xs" style="background: transparent; border: none; padding: 0; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;">Copy</button>
+          <button id="fullscreen-tempo-modal" class="text-gray-400 hover:text-white text-sm" style="background: transparent; border: none; padding: 0; cursor: pointer; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;" title="Fullscreen">⛶</button>
+          <button id="close-tempo-modal" class="text-gray-400 hover:text-white text-xl" style="background: transparent; border: none; padding: 0; cursor: pointer; font-size: 0.75rem; line-height: 1.5; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: auto;">X;</button>
           </div>
         </div>
         

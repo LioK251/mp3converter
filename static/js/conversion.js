@@ -412,9 +412,27 @@ function showConversionResult(resultData) {
     }
     
     conversionTimeDisplay.style.display = 'block';
+    conversionTimeDisplay.style.opacity = '0';
+    conversionTimeDisplay.style.transform = 'translateY(-10px)';
+    conversionTimeDisplay.classList.add('show');
+    
+    requestAnimationFrame(() => {
+      conversionTimeDisplay.style.opacity = '1';
+      conversionTimeDisplay.style.transform = 'translateY(0)';
+    });
+  }
+  
+  if (videoPreview) {
+    videoPreview.style.display = 'none';
   }
   
   addToHistory(resultData);
+  
+  if (typeof setupDeleteButtons === 'function') {
+    setTimeout(() => {
+      setupDeleteButtons();
+    }, 100);
+  }
 }
 
 const youtubeForm = document.querySelector('form input[name="media_url"]')?.closest('form');
