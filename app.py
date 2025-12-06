@@ -141,8 +141,8 @@ def load_history(max_items: int | None = None):
             if not isinstance(data, list):
                 return []
             if max_items:
-                return list(reversed(list(reversed(data))[-max_items:]))
-            return data
+                return list(reversed(data[-max_items:]))
+            return list(reversed(data))
     except Exception:
         return []
 
@@ -171,7 +171,7 @@ def human_dt(ts: float) -> str:
 
 def prepare_history_for_ui(items: list[dict]):
     prepared = []
-    for it in reversed(items):
+    for it in items:
         prepared.append({
             "timestamp": it.get("timestamp"),
             "time_str": human_dt(it.get("timestamp", time.time())),

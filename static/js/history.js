@@ -1,3 +1,43 @@
+async function reloadConverterHistory() {
+  const historyList = document.getElementById('history-list');
+  if (!historyList) return;
+  
+  try {
+    const response = await fetch('/api/history?limit=32&_=' + Date.now());
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const history = await response.json();
+    
+    if (!history || history.length === 0) {
+      historyList.innerHTML = '<div class="text-gray-400 text-sm">Nothing here yet. Convert something first.</div>';
+      setTimeout(() => {
+        setupDeleteButtons();
+      }, 50);
+      return;
+    }
+    
+    historyList.innerHTML = '';
+    
+    history.forEach(item => {
+      const itemHTML = createHistoryItemHTML(item);
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = itemHTML.trim();
+      const historyItemElement = tempDiv.firstElementChild;
+      if (historyItemElement) {
+        historyList.appendChild(historyItemElement);
+      }
+    });
+    
+    setTimeout(() => {
+      setupDeleteButtons();
+    }, 50);
+  } catch (error) {
+    console.error('Error reloading converter history:', error);
+  }
+}
+
 function addToHistory(resultData) {
   try {
     const historyList = document.getElementById('history-list');
@@ -380,7 +420,7 @@ async function setupDeleteButtons() {
         return;
       }
       
-      const historyItem = this.closest('.history-item');
+      const timestampFloat = parseFloat(timestamp);
       
       try {
         const response = await fetch('/api/history/delete', {
@@ -388,51 +428,91 @@ async function setupDeleteButtons() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ timestamp: parseFloat(timestamp) })
+          body: JSON.stringify({ timestamp: timestampFloat })
         });
         
         const responseData = await response.json();
         
-        if (!response.ok) {
-          if (response.status === 404) {
-            historyItem.remove();
-            const historyList = document.getElementById('history-list');
-            const fullHistoryList = document.getElementById('full-history-list');
-            
-            if (historyList) {
-              const items = historyList.querySelectorAll('.history-item');
-              if (items.length === 0) {
-                historyList.innerHTML = '<div class="text-gray-400 text-sm">Nothing here yet. Convert something first.</div>';
-              }
-            }
-            
-            if (fullHistoryList) {
-              const items = fullHistoryList.querySelectorAll('.history-item');
-              if (items.length === 0) {
-                fullHistoryList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">No conversion history found.</div>';
-              }
-            }
-            return;
-          }
+        if (!response.ok && response.status !== 404) {
           throw new Error(responseData.error || 'Failed to delete history item');
         }
-        
-        historyItem.remove();
         
         const historyList = document.getElementById('history-list');
         const fullHistoryList = document.getElementById('full-history-list');
         
+        let removedFromHistoryList = false;
+        let removedFromFullHistoryList = false;
+        
         if (historyList) {
-          const items = historyList.querySelectorAll('.history-item');
-          if (items.length === 0) {
+          const items = Array.from(historyList.querySelectorAll('.history-item'));
+          items.forEach(item => {
+            const deleteBtn = item.querySelector('.delete-history-btn');
+            if (deleteBtn) {
+              const itemTimestamp = deleteBtn.getAttribute('data-timestamp');
+              if (itemTimestamp) {
+                const itemTimestampFloat = parseFloat(itemTimestamp);
+                if (!isNaN(itemTimestampFloat) && Math.abs(itemTimestampFloat - timestampFloat) < 0.001) {
+                  item.remove();
+                  removedFromHistoryList = true;
+                }
+              }
+            }
+          });
+          
+          const remainingItems = historyList.querySelectorAll('.history-item');
+          if (remainingItems.length === 0) {
             historyList.innerHTML = '<div class="text-gray-400 text-sm">Nothing here yet. Convert something first.</div>';
           }
         }
         
         if (fullHistoryList) {
-          const items = fullHistoryList.querySelectorAll('.history-item');
-          if (items.length === 0) {
+          const items = Array.from(fullHistoryList.querySelectorAll('.history-item'));
+          items.forEach(item => {
+            const deleteBtn = item.querySelector('.delete-history-btn');
+            if (deleteBtn) {
+              const itemTimestamp = deleteBtn.getAttribute('data-timestamp');
+              if (itemTimestamp) {
+                const itemTimestampFloat = parseFloat(itemTimestamp);
+                if (!isNaN(itemTimestampFloat) && Math.abs(itemTimestampFloat - timestampFloat) < 0.001) {
+                  item.remove();
+                  removedFromFullHistoryList = true;
+                }
+              }
+            }
+          });
+          
+          const remainingItems = fullHistoryList.querySelectorAll('.history-item');
+          if (remainingItems.length === 0) {
             fullHistoryList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">No conversion history found.</div>';
+          }
+        }
+        
+        if (typeof fullHistoryData !== 'undefined' && Array.isArray(fullHistoryData)) {
+          fullHistoryData = fullHistoryData.filter(item => {
+            const itemTimestamp = item.timestamp || 0;
+            return Math.abs(itemTimestamp - timestampFloat) >= 0.001;
+          });
+        }
+        
+        if (removedFromHistoryList || removedFromFullHistoryList) {
+          if (historyList) {
+            await reloadConverterHistory();
+          }
+          
+          if (fullHistoryList) {
+            const searchInput = document.getElementById('history-search-input');
+            if (searchInput && searchInput.value.trim() !== '') {
+              filterHistoryItems(searchInput.value);
+            } else {
+              displayHistoryItems(fullHistoryData);
+            }
+            setTimeout(() => {
+              setupDeleteButtons();
+            }, 50);
+          } else {
+            setTimeout(() => {
+              setupDeleteButtons();
+            }, 50);
           }
         }
       } catch (error) {
