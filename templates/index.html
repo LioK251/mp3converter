@@ -254,7 +254,12 @@
             </button>
           </div>
           
-          <div id="full-history-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[65vh] overflow-y-auto hide-scrollbar items-stretch">
+          <div class="mb-3">
+            <input type="text" id="history-search-input" placeholder="Search history by title, URL, MIDI name, or type..." 
+                   class="block w-full p-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 placeholder-gray-400 hover-effect focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          
+          <div id="full-history-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[65vh] overflow-y-auto small-scrollbar items-stretch">
             <div class="text-center text-gray-400 py-6 col-span-full text-sm">Loading history...</div>
           </div>
         </div>
@@ -399,6 +404,19 @@
       </div>
     </div>
 
+    <div id="custom-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+      <div class="bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4 border border-gray-700 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <h3 id="modal-title" class="text-xl font-semibold text-white"></h3>
+          <button id="modal-close" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <p id="modal-message" class="text-gray-200 mb-6"></p>
+        <div id="modal-buttons" class="flex gap-3 justify-end">
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/modal.js"></script>
     <script src="/static/js/device.js"></script>
     <script src="/static/js/settings.js"></script>
     <script src="/static/js/sheets-utils.js"></script>

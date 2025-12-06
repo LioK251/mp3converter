@@ -64,10 +64,10 @@ if (copyTransposesBtn) {
         navigator.clipboard.writeText(transposeString).then(() => {
         }).catch(err => {
           console.error('Failed to copy:', err);
-          alert('Failed to copy transposes to clipboard');
+          showAlert('Failed to copy transposes to clipboard', 'Error');
         });
       } else {
-        alert('No transpose values found');
+        showAlert('No transpose values found', 'Info');
       }
     }
   });
@@ -152,7 +152,7 @@ if (copyTempoTextBtn) {
       navigator.clipboard.writeText(text).then(() => {
       }).catch(err => {
         console.error('Failed to copy:', err);
-        alert('Failed to copy text to clipboard');
+        showAlert('Failed to copy text to clipboard', 'Error');
       });
     }
   });
@@ -247,4 +247,3 @@ document.addEventListener('click', function(event) {
     }
   }
 });
-

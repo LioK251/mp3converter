@@ -269,6 +269,24 @@ iframe:hover {
 .hide-scrollbar::-webkit-scrollbar {
     display: none;
 }
+.small-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #9333ea transparent;
+}
+.small-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+.small-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.small-scrollbar::-webkit-scrollbar-thumb {
+    background: #9333ea;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+.small-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a855f7;
+}
 .history-card {
     overflow-y: auto;
     width: 530.39px;

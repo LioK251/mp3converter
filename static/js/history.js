@@ -152,6 +152,74 @@ function createHistoryItemHTML(item) {
   return html;
 }
 
+let fullHistoryData = [];
+
+function filterHistoryItems(searchQuery) {
+  const historyList = document.getElementById('full-history-list');
+  if (!historyList) return;
+  
+  if (!searchQuery || searchQuery.trim() === '') {
+    displayHistoryItems(fullHistoryData);
+    return;
+  }
+  
+  const query = searchQuery.toLowerCase().trim();
+  const filtered = fullHistoryData.filter(item => {
+    if (item.video_title && item.video_title.toLowerCase().includes(query)) {
+      return true;
+    }
+    if (item.video_id && item.video_id.toLowerCase().includes(query)) {
+      return true;
+    }
+    if (item.youtube_url && item.youtube_url.toLowerCase().includes(query)) {
+      return true;
+    }
+    if (item.tiktok_url && item.tiktok_url.toLowerCase().includes(query)) {
+      return true;
+    }
+    if (item.discord_url && item.discord_url.toLowerCase().includes(query)) {
+      return true;
+    }
+    if (item.midi_name && item.midi_name.toLowerCase().includes(query)) {
+      return true;
+    }
+    if (item.mp3_name && item.mp3_name.toLowerCase().includes(query)) {
+      return true;
+    }
+    if (item.library && item.library.toLowerCase().includes(query)) {
+      return true;
+    }
+    if (item.type && item.type.toLowerCase().includes(query)) {
+      return true;
+    }
+    return false;
+  });
+  
+  displayHistoryItems(filtered);
+}
+
+function displayHistoryItems(items) {
+  const historyList = document.getElementById('full-history-list');
+  if (!historyList) return;
+  
+  if (!items || items.length === 0) {
+    historyList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">No conversion history found.</div>';
+    return;
+  }
+  
+  historyList.innerHTML = '';
+  
+  items.forEach(item => {
+    const itemHTML = createHistoryItemHTML(item);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = itemHTML.trim();
+    const historyItemElement = tempDiv.firstElementChild;
+    if (historyItemElement) {
+      historyList.appendChild(historyItemElement);
+    }
+  });
+}
+
 async function loadFullHistory() {
   const historyList = document.getElementById('full-history-list');
   if (!historyList) return;
@@ -165,23 +233,14 @@ async function loadFullHistory() {
     }
     
     const history = await response.json();
+    fullHistoryData = history || [];
     
-    if (!history || history.length === 0) {
-      historyList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">No conversion history found.</div>';
-      return;
+    const searchInput = document.getElementById('history-search-input');
+    if (searchInput && searchInput.value.trim()) {
+      filterHistoryItems(searchInput.value);
+    } else {
+      displayHistoryItems(fullHistoryData);
     }
-    
-    historyList.innerHTML = '';
-    
-    history.forEach(item => {
-      const itemHTML = createHistoryItemHTML(item);
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = itemHTML.trim();
-      const historyItemElement = tempDiv.firstElementChild;
-      if (historyItemElement) {
-        historyList.appendChild(historyItemElement);
-      }
-    });
   } catch (error) {
     console.error('Error loading history:', error);
     historyList.innerHTML = `<div class="text-center text-red-400 py-6 col-span-full text-sm">Error loading history: ${error.message}</div>`;
@@ -195,14 +254,29 @@ if (refreshHistoryBtn) {
   });
 }
 
-function setupDeleteButtons() {
+const historySearchInput = document.getElementById('history-search-input');
+if (historySearchInput) {
+  historySearchInput.addEventListener('input', (e) => {
+    filterHistoryItems(e.target.value);
+  });
+  
+  historySearchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      filterHistoryItems(e.target.value);
+    }
+  });
+}
+
+async function setupDeleteButtons() {
   document.querySelectorAll('.delete-history-btn').forEach(btn => {
     btn.addEventListener('click', async function(e) {
       e.stopPropagation();
       const timestamp = this.getAttribute('data-timestamp');
       if (!timestamp) return;
       
-      if (!confirm('Are you sure you want to delete this history item?')) {
+      const confirmed = await showConfirm('Are you sure you want to delete this history item?', 'Delete History Item');
+      if (!confirmed) {
         return;
       }
       
@@ -239,7 +313,7 @@ function setupDeleteButtons() {
         }
       } catch (error) {
         console.error('Error deleting history item:', error);
-        alert('Failed to delete history item: ' + error.message);
+        showAlert('Failed to delete history item: ' + error.message, 'Error');
       }
     });
   });
@@ -268,4 +342,3 @@ if (fullHistoryList) {
   var items = list.querySelectorAll('.history-item');
   for (var i = 32; i < items.length; i++) { items[i].remove(); }
 })();
-

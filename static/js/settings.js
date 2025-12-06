@@ -110,8 +110,9 @@ if (saveSettingsBtn) {
 }
 
 if (resetSettingsBtn) {
-  resetSettingsBtn.addEventListener('click', () => {
-    if (confirm('Reset all settings to defaults?')) {
+  resetSettingsBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm('Reset all settings to defaults?', 'Reset Settings');
+    if (confirmed) {
       populateSettingsModal(defaultSheetsSettings);
       saveSheetsSettings(defaultSheetsSettings);
     }
@@ -127,4 +128,3 @@ document.getElementById('setting-break-lines-every')?.addEventListener('input', 
 document.getElementById('setting-quantize')?.addEventListener('input', (e) => {
   document.getElementById('quantize-value').textContent = e.target.value;
 });
-

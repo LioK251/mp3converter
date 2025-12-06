@@ -117,7 +117,7 @@ window.convertToSheets = function(event, midiFilename) {
   
   if (!button) {
     console.error('Could not find button element');
-    alert('Error: Could not find button element');
+    showAlert('Error: Could not find button element', 'Error');
     return;
   }
   
@@ -172,7 +172,7 @@ window.convertToSheets = function(event, midiFilename) {
   })
   .catch(error => {
     console.error('Convert to sheets error:', error);
-    alert('Failed to convert MIDI to sheets: ' + (error.message || error.error || error));
+    showAlert('Failed to convert MIDI to sheets: ' + (error.message || error.error || error), 'Error');
     button.disabled = false;
     button.textContent = originalText;
   });
@@ -426,7 +426,7 @@ if (youtubeForm) {
     const url = urlInput.value.trim();
     
     if (!url) {
-      alert('Please enter a URL');
+      showAlert('Please enter a URL', 'Input Required');
       return;
     }
     
@@ -521,7 +521,7 @@ if (youtubeForm) {
         throw new Error('Conversion timeout');
       }
     } catch (err) {
-      alert('Error: ' + err.message);
+      showAlert('Error: ' + err.message, 'Error');
       progressText.style.display = 'none';
       progressBar.style.display = 'none';
     } finally {
@@ -541,4 +541,3 @@ document.addEventListener('click', function(event) {
     }
   }
 });
-
