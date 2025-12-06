@@ -4,7 +4,10 @@ body {
     animation: gradient 15s ease infinite;
 }
 #system-info-box {
-    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out, border-color 0.3s ease, box-shadow 0.3s ease;
+    border-color: rgba(55, 65, 81, 1) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+    transform: translateY(0) !important;
+    transition: all 0.3s ease;
 }
 #system-info-box:hover {
     border-color: rgba(147, 51, 234, 0.4) !important;
