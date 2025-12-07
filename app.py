@@ -385,6 +385,7 @@ def download_mp3_from_youtube(youtube_url: str, output_dir: str,
     outtmpl = os.path.join(output_dir, '%(title)s.%(ext)s')
     
     format_selectors = [
+        'bestaudio[ext=m4a][abr>=256]/bestaudio[ext=m4a]/bestaudio[ext=webm][abr>=256]/bestaudio[ext=webm]/bestaudio[ext=opus][abr>=256]/bestaudio[ext=opus]/bestaudio[ext!=mhtml]/best[ext!=mhtml]',
         'bestaudio[ext!=mhtml]/best[ext!=mhtml]',
         'bestaudio/best[ext!=mhtml]',
         'bestaudio/best',
