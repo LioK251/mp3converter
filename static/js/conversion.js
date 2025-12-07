@@ -392,8 +392,9 @@ function showConversionResult(resultData) {
     }
     
     if (html) {
-      videoPreviewContent.innerHTML = html;
-      videoPreview.style.display = 'block';
+      requestAnimationFrame(() => {
+        videoPreviewContent.innerHTML = html;
+      });
     }
   }
   
@@ -422,10 +423,6 @@ function showConversionResult(resultData) {
     });
   }
   
-  if (videoPreview) {
-    videoPreview.style.display = 'none';
-  }
-  
   addToHistory(resultData);
   
   if (typeof setupDeleteButtons === 'function') {
@@ -448,9 +445,7 @@ if (youtubeForm) {
       return;
     }
     
-    const videoPreview = document.getElementById('videoPreview');
     const conversionTimeDisplay = document.getElementById('conversionTimeDisplay');
-    if (videoPreview) videoPreview.style.display = 'none';
     if (conversionTimeDisplay) conversionTimeDisplay.style.display = 'none';
     progressText.style.display = 'block';
     progressBar.style.display = 'block';
@@ -549,14 +544,26 @@ if (youtubeForm) {
 }
 
 document.addEventListener('click', function(event) {
-  const button = event.target.closest('.download-sheets-btn');
-  if (button) {
+  const viewTempoBtn = event.target.closest('.view-tempo-btn');
+  if (viewTempoBtn) {
     event.preventDefault();
     event.stopPropagation();
-    const midiFilename = button.getAttribute('data-midi-filename');
+    const midiFilename = viewTempoBtn.getAttribute('data-midi-filename');
+    if (midiFilename && typeof viewTempoText === 'function') {
+      viewTempoText(midiFilename);
+    }
+    return;
+  }
+  
+  const downloadSheetsBtn = event.target.closest('.download-sheets-btn');
+  if (downloadSheetsBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const midiFilename = downloadSheetsBtn.getAttribute('data-midi-filename');
     if (midiFilename) {
       window.convertToSheets(event, midiFilename);
     }
+    return;
   }
 });
 

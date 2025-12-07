@@ -88,7 +88,6 @@ body {
     background: linear-gradient(-45deg, #1f2937, #374151, #111827, #1f2937);
     background-size: 400% 400%;
     animation: gradient 15s ease infinite;
-    background-attachment: fixed;
     background-position: center;
     background-repeat: no-repeat;
     color: var(--text-color);
@@ -98,7 +97,6 @@ body.has-wallpaper {
     background: linear-gradient(-45deg, rgba(31, 41, 55, 0.85), rgba(55, 65, 81, 0.85), rgba(17, 24, 39, 0.85), rgba(31, 41, 55, 0.85));
     background-size: 400% 400%;
     animation: gradient 15s ease infinite;
-    background-attachment: fixed;
     background-position: center;
     background-repeat: no-repeat;
 }
@@ -114,10 +112,9 @@ body.has-wallpaper::before {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    background-attachment: fixed;
     z-index: -1;
     opacity: var(--wallpaper-opacity, 0.6);
-    transition: opacity 0.3s ease, background-image 0.3s ease;
+    transition: opacity 0.5s ease, background-image 0.5s ease;
 }
 
 body.has-wallpaper-video::before {
@@ -133,12 +130,12 @@ body.has-wallpaper-video #background-video {
     object-fit: cover;
     z-index: -1;
     opacity: var(--wallpaper-opacity, 0.6);
-    transition: opacity 0.3s ease;
+    transition: opacity 0.5s ease;
 }
 #system-info-box {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
     transform: translateY(0) !important;
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 #system-info-box:hover {
@@ -512,7 +509,7 @@ input[type="text"]:focus, select:focus {
     transform: translateY(-1px);
 }
 .hover-effect {
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .hover-effect:hover {
     transform: translateY(-2px);
@@ -525,13 +522,16 @@ input[type="text"]:focus, select:focus {
     transform: translateY(-2px);
 }
 .history-item {
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .history-item.flex {
     display: flex;
 }
 .history-item .flex-1 {
     min-height: 0;
+}
+#full-history-list {
+    contain: layout style paint;
 }
 #full-history-list .history-item {
     height: 100%;
@@ -542,6 +542,9 @@ input[type="text"]:focus, select:focus {
 }
 #full-history-list .history-item .mt-auto {
     margin-top: auto;
+}
+#history-list {
+    contain: layout style paint;
 }
 #history-list .history-item {
     display: flex;
@@ -693,7 +696,7 @@ iframe:hover {
     transform: translateY(0);
 }
 #sheets-settings-modal {
-    transition: opacity 0.2s ease-in-out, backdrop-filter 0.2s ease-in-out;
+    transition: opacity 0.15s ease-out;
 }
 #sheets-settings-modal.hidden {
     opacity: 0;
@@ -703,8 +706,8 @@ iframe:hover {
     opacity: 1;
 }
 #sheets-settings-modal > div {
-    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
-    transform: scale(0.95);
+    transition: transform 0.15s ease-out;
+    transform: scale(0.98);
 }
 #sheets-settings-modal:not(.hidden) > div {
     transform: scale(1);
@@ -768,6 +771,7 @@ iframe:hover {
     flex: 0 0 530.39px;
     height: 516.98px !important;
     max-height: 516.98px !important;
+    contain: layout style paint;
 }
 .chord-block {
     position: relative;
@@ -845,16 +849,15 @@ iframe:hover {
 }
 #tempo-modal-header {
     background: transparent;
-    transition: all 0.3s ease;
 }
 #tempo-modal-title {
     padding: 0 1rem;
 }
 #view-tempo-modal {
-    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+    transition: opacity 0.15s ease-out;
 }
 #view-tempo-modal.fullscreen-mode {
-    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+    transition: opacity 0.15s ease-out;
 }
 #tempo-modal-content {
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
@@ -867,9 +870,6 @@ iframe:hover {
                 left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-#view-tempo-modal {
-    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
 }
 #view-tempo-modal.fullscreen-mode {
     background-color: transparent !important;
@@ -916,13 +916,10 @@ iframe:hover {
     right: 0 !important;
     z-index: 100 !important;
 }
-#tempo-modal-buttons {
-    transition: all 0.3s ease;
-}
 #tempo-text-content {
-    transition: all 0.3s ease;
     overflow-x: hidden !important;
     overflow-y: auto;
+    contain: layout style paint;
 }
 .small-scrollbar::-webkit-scrollbar {
     width: 8px;

@@ -7,12 +7,17 @@ function showModal(title, message, options = {}) {
   
   if (!modal) return;
   
-  modalTitle.textContent = title;
-  modalMessage.textContent = message;
   modalButtons.innerHTML = '';
   
+  requestAnimationFrame(() => {
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+  });
+  
   const closeModal = () => {
-    modal.classList.add('hidden');
+    requestAnimationFrame(() => {
+      modal.classList.add('hidden');
+    });
   };
   
   if (options.confirm) {

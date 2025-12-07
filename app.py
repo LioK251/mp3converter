@@ -31,10 +31,13 @@ except ImportError as e:
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-UPLOAD_FOLDER = "uploads"
-CONVERTED_FOLDER = "converted"
+ALLOWED_EXTENSIONS = {"mp3"}
+ALLOWED_MIDI_EXTENSIONS = {"mid", "midi"}
 HISTORY_FILE = "history.json"
 SETTINGS_FILE = "settings.json"
+
+UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "uploads")
+CONVERTED_FOLDER = os.environ.get("CONVERTED_FOLDER", "converted")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CONVERTED_FOLDER, exist_ok=True)
 
@@ -50,17 +53,9 @@ MAX_THUMBNAIL_BYTES = 2 * 1024 * 1024
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", os.urandom(32))
-
-ALLOWED_EXTENSIONS = {"mp3"}
-ALLOWED_MIDI_EXTENSIONS = {"mid", "midi"}
-UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "uploads")
-CONVERTED_FOLDER = os.environ.get("CONVERTED_FOLDER", "converted")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(CONVERTED_FOLDER, exist_ok=True)
-
-app.config.setdefault("UPLOAD_FOLDER", UPLOAD_FOLDER)
-app.config.setdefault("CONVERTED_FOLDER", CONVERTED_FOLDER)
-
+app.secret_key = app.config["SECRET_KEY"]
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["CONVERTED_FOLDER"] = CONVERTED_FOLDER
 app.config.update({
     "SESSION_COOKIE_SECURE": True,
     "SESSION_COOKIE_HTTPONLY": True,
@@ -69,10 +64,6 @@ app.config.update({
 
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
-
-app.secret_key = app.config["SECRET_KEY"]
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["CONVERTED_FOLDER"] = CONVERTED_FOLDER
 
 csrf = CSRFProtect(app)
 app.jinja_env.globals['csrf_token'] = generate_csrf
@@ -634,7 +625,6 @@ def upload_file():
     video_id = None
     conversion_time = None
     midi_name = None
-    is_converting = False
 
     def render_with_history(**kwargs):
         history_ui = prepare_history_for_ui(load_history())
@@ -679,7 +669,6 @@ def upload_file():
             
             start = time.time()
             try:
-                is_converting = True
                 convert_to_midi(mp3_path, midi_path, device)
                 conversion_time = round(time.time() - start, 2)
                 flash(f"MIDI created using Transkun: {midi_name}")
@@ -699,8 +688,6 @@ def upload_file():
 
             except Exception as e:
                 flash(f"Conversion failed: {str(e)}")
-            finally:
-                is_converting = False
 
         elif "media_url" in request.form:
             url = request.form["media_url"].strip()
@@ -755,7 +742,6 @@ def upload_file():
                 
                 start = time.time()
                 try:
-                    is_converting = True
                     convert_to_midi(mp3_path, midi_path, device)
                     conversion_time = round(time.time() - start, 2)
                     flash(f"MIDI created using Transkun: {midi_name}")
@@ -777,8 +763,6 @@ def upload_file():
 
                 except Exception as e:
                     flash(f"Conversion failed: {str(e)}")
-                finally:
-                    is_converting = False
 
             except yt_dlp.DownloadError as e:
                 logger.error(f"YouTube/TikTok/Discord download error: {str(e)}")
@@ -794,14 +778,12 @@ def upload_file():
             video_id=video_id,
             conversion_time=conversion_time,
             midi_name=midi_name,
-            is_converting=is_converting,
         )
 
     return render_with_history(
         video_id=video_id,
         conversion_time=conversion_time,
         midi_name=midi_name,
-        is_converting=is_converting,
     )
 
 @app.route("/converted/<path:filename>")
@@ -927,12 +909,25 @@ conversion_tasks = {}
 task_results = {}
 active_threads = {}
 
-def run_conversion_task(task_id: str, url: str, conversion_library: str = "transkun", device: str = None):
+def _is_cancelled(task_id: str) -> bool:
+    """Check if a task has been cancelled"""
+    return conversion_tasks.get(task_id, {}).get("status") == "cancelled"
+
+def _cleanup_files(*filepaths: str):
+    """Safely remove files if they exist"""
+    for filepath in filepaths:
+        if filepath and os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass
+
+def run_conversion_task(task_id: str, url: str, device: str = None):
     with app.app_context():
         try:
             conversion_tasks[task_id] = {"status": "processing", "progress": "Starting download..."}
             
-            if conversion_tasks.get(task_id, {}).get("status") == "cancelled":
+            if _is_cancelled(task_id):
                 return
             
             source = detect_source(url)
@@ -946,7 +941,7 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
 
             conversion_tasks[task_id] = {"status": "processing", "progress": "Downloading video..."}
             
-            if conversion_tasks.get(task_id, {}).get("status") == "cancelled":
+            if _is_cancelled(task_id):
                 return
             
             stop_event = Event()
@@ -978,12 +973,8 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
                     cookiefile=None,
                 )
 
-            if conversion_tasks.get(task_id, {}).get("status") == "cancelled":
-                if os.path.exists(mp3_path):
-                    try:
-                        os.remove(mp3_path)
-                    except:
-                        pass
+            if _is_cancelled(task_id):
+                _cleanup_files(mp3_path)
                 return
 
             if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
@@ -992,12 +983,8 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
 
             conversion_tasks[task_id] = {"status": "processing", "progress": "Converting to MIDI..."}
             
-            if conversion_tasks.get(task_id, {}).get("status") == "cancelled":
-                if os.path.exists(mp3_path):
-                    try:
-                        os.remove(mp3_path)
-                    except:
-                        pass
+            if _is_cancelled(task_id):
+                _cleanup_files(mp3_path)
                 return
             
             midi_name = os.path.splitext(os.path.basename(mp3_path))[0] + "_transkun.mid"
@@ -1005,40 +992,14 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
 
             start = time.time()
             
-            if conversion_tasks.get(task_id, {}).get("status") == "cancelled" or (task_id in active_threads and isinstance(active_threads[task_id], Event) and active_threads[task_id].is_set()):
-                if os.path.exists(mp3_path):
-                    try:
-                        os.remove(mp3_path)
-                    except:
-                        pass
+            if _is_cancelled(task_id):
+                _cleanup_files(mp3_path)
                 return
             
             output_library = convert_to_midi(mp3_path, midi_path, device)
             
-            if conversion_tasks.get(task_id, {}).get("status") == "cancelled" or (task_id in active_threads and isinstance(active_threads[task_id], Event) and active_threads[task_id].is_set()):
-                if os.path.exists(mp3_path):
-                    try:
-                        os.remove(mp3_path)
-                    except:
-                        pass
-                if os.path.exists(midi_path):
-                    try:
-                        os.remove(midi_path)
-                    except:
-                        pass
-                return
-
-            if conversion_tasks.get(task_id, {}).get("status") == "cancelled":
-                if os.path.exists(mp3_path):
-                    try:
-                        os.remove(mp3_path)
-                    except:
-                        pass
-                if os.path.exists(midi_path):
-                    try:
-                        os.remove(midi_path)
-                    except:
-                        pass
+            if _is_cancelled(task_id):
+                _cleanup_files(mp3_path, midi_path)
                 return
 
             conversion_time = round(time.time() - start, 2)
@@ -1078,23 +1039,16 @@ def run_conversion_task(task_id: str, url: str, conversion_library: str = "trans
             }
             conversion_tasks[task_id] = {"status": "completed"}
             
-            if os.path.exists(mp3_path):
-                try:
-                    os.remove(mp3_path)
-                    logger.debug(f"Deleted downloaded MP3 file: {mp3_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to delete downloaded MP3 file {mp3_path}: {e}")
+            _cleanup_files(mp3_path)
+            logger.debug(f"Deleted downloaded MP3 file: {mp3_path}")
 
         except Exception as e:
             logger.error(f"Conversion task error: {str(e)}")
-            if conversion_tasks.get(task_id, {}).get("status") != "cancelled":
+            if not _is_cancelled(task_id):
                 conversion_tasks[task_id] = {"status": "error", "error": str(e)}
-            if 'mp3_path' in locals() and os.path.exists(mp3_path):
-                try:
-                    os.remove(mp3_path)
-                    logger.debug(f"Deleted downloaded MP3 file after error: {mp3_path}")
-                except Exception as del_e:
-                    logger.warning(f"Failed to delete downloaded MP3 file {mp3_path} after error: {del_e}")
+            if 'mp3_path' in locals():
+                _cleanup_files(mp3_path)
+                logger.debug(f"Deleted downloaded MP3 file after error: {mp3_path}")
 
 @csrf.exempt
 @app.route("/api/health", methods=["GET"])
@@ -1112,7 +1066,6 @@ def api_convert():
             return jsonify({"error": "No JSON data provided"}), 400
 
         url = data.get("media_url", "").strip()
-        conversion_library = data.get("conversion_library", "transkun")
 
         if not url:
             return jsonify({"error": "No media_url provided"}), 400
@@ -1128,7 +1081,7 @@ def api_convert():
         task_id = str(uuid.uuid4())
         conversion_tasks[task_id] = {"status": "queued", "progress": "Queued for processing"}
         
-        thread = Thread(target=run_conversion_task, args=(task_id, url, "transkun", device))
+        thread = Thread(target=run_conversion_task, args=(task_id, url, device))
         thread.daemon = True
         thread.start()
 
@@ -1376,7 +1329,6 @@ def api_upload_midi():
         logger.error(f"Upload MIDI error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-@csrf.exempt
 @csrf.exempt
 @app.route("/api/wallpapers", methods=["GET"])
 def api_list_wallpapers():

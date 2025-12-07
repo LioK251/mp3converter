@@ -1,5 +1,4 @@
 Flask
-flask-limiter
 flask-wtf
 Werkzeug
 yt-dlp

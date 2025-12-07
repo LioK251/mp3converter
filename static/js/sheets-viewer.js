@@ -101,11 +101,19 @@ window.viewTempoText = async function(midiFilename, title = null) {
     titleElement.textContent = displayTitle;
   }
   
-  content.innerHTML = '<div class="text-center text-gray-400">Loading sheet text...</div>';
+  requestAnimationFrame(() => {
+    content.textContent = '';
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'text-center text-gray-400';
+    loadingDiv.textContent = 'Loading sheet text...';
+    content.appendChild(loadingDiv);
+  });
   
-  modal.classList.remove('hidden');
-  modal.style.opacity = '0';
-  modal.style.transition = 'opacity 0.2s ease-in-out';
+  requestAnimationFrame(() => {
+    modal.classList.remove('hidden');
+    modal.style.opacity = '0';
+    modal.style.transition = 'opacity 0.15s ease-in';
+  });
   
   try {
     const savedSettings = await loadSheetsSettings();
@@ -128,39 +136,42 @@ window.viewTempoText = async function(midiFilename, title = null) {
     }
     
     const data = await response.json();
-    console.log('Response data:', data);
-    console.log('sheet_text exists:', 'sheet_text' in data);
-    console.log('sheet_text value:', data.sheet_text);
-    console.log('sheet_text type:', typeof data.sheet_text);
-    console.log('sheet_text length:', data.sheet_text ? data.sheet_text.length : 'N/A');
     
     if (data.success && data.sheet_text !== undefined && data.sheet_text !== null) {
       const coloredText = colorizeTempoText(data.sheet_text);
-      content.innerHTML = coloredText;
+      const centerSettings = await loadSheetsSettings();
       
-      const settings = await loadSheetsSettings();
-      if (settings.center_sheet_text) {
-        content.classList.add('text-center');
-      } else {
-        content.classList.remove('text-center');
-      }
-      
-      if (typeof updateTransposeModeButton === 'function') {
-        updateTransposeModeButton();
-      }
+      requestAnimationFrame(() => {
+        content.innerHTML = coloredText;
+        
+        if (centerSettings.center_sheet_text) {
+          content.classList.add('text-center');
+        } else {
+          content.classList.remove('text-center');
+        }
+        
+        if (typeof updateTransposeModeButton === 'function') {
+          updateTransposeModeButton();
+        }
+        
+        requestAnimationFrame(() => {
+          modal.style.opacity = '1';
+        });
+      });
+    } else {
+      throw new Error(data.error || 'Failed to load sheet text');
+    }
+  } catch (error) {
+    requestAnimationFrame(() => {
+      content.textContent = '';
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'text-center text-red-400';
+      errorDiv.textContent = `Error: ${error.message}`;
+      content.appendChild(errorDiv);
       
       requestAnimationFrame(() => {
         modal.style.opacity = '1';
       });
-    } else {
-      console.error('Missing sheet_text or success flag. Response:', data);
-      throw new Error(data.error || 'Failed to load sheet text');
-    }
-  } catch (error) {
-    console.error('Convert to QWERTY error:', error);
-    content.innerHTML = `<div class="text-center text-red-400">Error: ${error.message}</div>`;
-    requestAnimationFrame(() => {
-      modal.style.opacity = '1';
     });
   }
 }
@@ -170,24 +181,34 @@ const closeTempoModal = document.getElementById('close-tempo-modal');
 const copyTempoTextBtn = document.getElementById('copy-tempo-text');
 
 function clearSheetsContent() {
-  const content = document.getElementById('tempo-text-content');
-  if (content) {
-    content.innerHTML = '<div class="text-center text-gray-400">Loading...</div>';
-  }
-  currentMidiFilename = null;
+  requestAnimationFrame(() => {
+    const content = document.getElementById('tempo-text-content');
+    if (content) {
+      content.textContent = '';
+      content.className = 'flex-1 overflow-y-auto overflow-x-hidden small-scrollbar bg-gray-900 rounded p-1 font-mono text-sm text-gray-200 border border-gray-700 leading-relaxed pt-8 pr-2';
+    }
+    currentMidiFilename = null;
+  });
 }
 
 if (closeTempoModal) {
   closeTempoModal.addEventListener('click', () => {
     if (viewTempoModal) {
-      viewTempoModal.style.opacity = '0';
-      viewTempoModal.style.transition = 'opacity 0.2s ease-in-out';
-      setTimeout(() => {
-        viewTempoModal.classList.add('hidden');
-        viewTempoModal.style.opacity = '';
-        viewTempoModal.style.transition = '';
-        clearSheetsContent();
-      }, 200);
+      requestAnimationFrame(() => {
+        viewTempoModal.style.opacity = '0';
+        viewTempoModal.style.transition = 'opacity 0.15s ease-out';
+        
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            requestAnimationFrame(() => {
+              viewTempoModal.classList.add('hidden');
+              viewTempoModal.style.opacity = '';
+              viewTempoModal.style.transition = '';
+              clearSheetsContent();
+            });
+          }, 150);
+        });
+      });
     }
   });
 }
@@ -195,8 +216,21 @@ if (closeTempoModal) {
 if (viewTempoModal) {
   viewTempoModal.addEventListener('click', (e) => {
     if (e.target === viewTempoModal) {
-      viewTempoModal.classList.add('hidden');
-      clearSheetsContent();
+      requestAnimationFrame(() => {
+        viewTempoModal.style.opacity = '0';
+        viewTempoModal.style.transition = 'opacity 0.15s ease-out';
+        
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            requestAnimationFrame(() => {
+              viewTempoModal.classList.add('hidden');
+              viewTempoModal.style.opacity = '';
+              viewTempoModal.style.transition = '';
+              clearSheetsContent();
+            });
+          }, 150);
+        });
+      });
     }
   });
 }
@@ -226,24 +260,14 @@ if (fullscreenTempoBtn && tempoModalContent && viewTempoModalContainer) {
     
     if (!isFullscreen) {
       const rect = tempoModalContent.getBoundingClientRect();
-      const currentLeft = rect.left;
-      const currentTop = rect.top;
-      const currentWidth = rect.width;
-      const currentHeight = rect.height;
+      const headerContainer = document.getElementById('tempo-modal-header');
       
       tempoModalContent.style.position = 'fixed';
-      tempoModalContent.style.left = `${currentLeft}px`;
-      tempoModalContent.style.top = `${currentTop}px`;
-      tempoModalContent.style.width = `${currentWidth}px`;
-      tempoModalContent.style.height = `${currentHeight}px`;
+      tempoModalContent.style.left = `${rect.left}px`;
+      tempoModalContent.style.top = `${rect.top}px`;
+      tempoModalContent.style.width = `${rect.width}px`;
+      tempoModalContent.style.height = `${rect.height}px`;
       tempoModalContent.style.margin = '0';
-      tempoModalContent.style.willChange = 'width, height, left, top, right, bottom';
-      viewTempoModalContainer.style.willChange = 'background-color, backdrop-filter';
-      
-      const headerContainer = document.getElementById('tempo-modal-header');
-      if (headerContainer) {
-        headerContainer.style.willChange = 'position, top, left, right';
-      }
       
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -255,30 +279,13 @@ if (fullscreenTempoBtn && tempoModalContent && viewTempoModalContainer) {
         });
       });
       
-      setTimeout(() => {
-        if (headerContainer) {
-          headerContainer.style.willChange = '';
-        }
-      }, 300);
-      
-      setTimeout(() => {
-        tempoModalContent.style.willChange = '';
-        viewTempoModalContainer.style.willChange = '';
-      }, 300);
-      
       fullscreenTempoBtn.textContent = '⛶';
       fullscreenTempoBtn.title = 'Exit Fullscreen';
       isFullscreen = true;
     } else {
-      tempoModalContent.style.willChange = 'width, height, left, top, right, bottom';
-      viewTempoModalContainer.style.willChange = 'background-color, backdrop-filter';
+      const headerContainer = document.getElementById('tempo-modal-header');
       
       viewTempoModalContainer.classList.add('items-center', 'justify-center');
-      
-      const headerContainer = document.getElementById('tempo-modal-header');
-      if (headerContainer) {
-        headerContainer.style.willChange = 'position, top, left, right';
-      }
       
       requestAnimationFrame(() => {
         viewTempoModalContainer.classList.remove('fullscreen-mode');
@@ -289,12 +296,6 @@ if (fullscreenTempoBtn && tempoModalContent && viewTempoModalContainer) {
       });
       
       setTimeout(() => {
-        if (headerContainer) {
-          headerContainer.style.willChange = '';
-        }
-      }, 300);
-      
-      setTimeout(() => {
         tempoModalContent.style.position = '';
         tempoModalContent.style.left = '';
         tempoModalContent.style.top = '';
@@ -303,8 +304,6 @@ if (fullscreenTempoBtn && tempoModalContent && viewTempoModalContainer) {
         tempoModalContent.style.margin = '';
         tempoModalContent.style.right = '';
         tempoModalContent.style.bottom = '';
-        tempoModalContent.style.willChange = '';
-        viewTempoModalContainer.style.willChange = '';
       }, 300);
       
       fullscreenTempoBtn.textContent = '⛶';
@@ -313,15 +312,3 @@ if (fullscreenTempoBtn && tempoModalContent && viewTempoModalContainer) {
     }
   });
 }
-
-document.addEventListener('click', function(event) {
-  const button = event.target.closest('.view-tempo-btn');
-  if (button) {
-    event.preventDefault();
-    event.stopPropagation();
-    const midiFilename = button.getAttribute('data-midi-filename');
-    if (midiFilename) {
-      viewTempoText(midiFilename);
-    }
-  }
-});

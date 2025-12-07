@@ -1,37 +1,23 @@
 # 🎵 MP3 → MIDI CONVERTER
 
-A powerful web application for converting MP3 audio files to MIDI format using Transkun, with support for YouTube, TikTok, and Discord CDN link downloads. The application also includes a QWERTY sheet converter for MIDI files, allowing you to play music directly on your keyboard.
+Web application for converting MP3 audio files to MIDI format using Transkun, with support for YouTube, TikTok, and Discord CDN links. Includes QWERTY sheet converter for MIDI files.
 
 ## ✨ Features
 
-- 🎹 **MP3 to MIDI Conversion**: Convert MP3 audio files to MIDI format using Transkun
-- 📺 **Multi-Platform Support**: Download and convert audio directly from YouTube, TikTok, and Discord CDN links
-- ⌨️ **QWERTY Sheet Converter**: Convert MIDI files to QWERTY keyboard sheet notation for easy playing
-- 🎨 **Modern Web Interface**: Beautiful, responsive UI with real-time progress tracking
-- 📜 **Conversion History**: Track all your conversions with thumbnails and metadata, with delete functionality
-- ⚙️ **Customizable Settings**: Fine-tune QWERTY sheet conversion parameters
-- 🚀 **Real-time Progress**: Monitor conversion progress with visual indicators
-- 💾 **Download Management**: Easy download of MIDI and sheet files
-- 🎯 **Async Processing**: Non-blocking conversions for better user experience
-- 🔄 **CUDA/CPU Toggle**: Switch between GPU (CUDA) and CPU processing with a simple toggle switch
-- 🎵 **Multi-Transpose Mode**: Automatic region-based transposition for pieces with key changes
-- 📋 **Copy Transposes**: Quickly copy transpose values for use in other tools
-- 🌐 **Auto-Browser Launch**: Automatically opens your browser when starting the application
+- MP3 to MIDI conversion using Transkun
+- YouTube, TikTok, and Discord CDN link support
+- QWERTY sheet converter
+- CUDA/CPU toggle for processing
+- Conversion history with delete functionality
+- Customizable settings with live preview
 ![Converter Page](templates/converter.png)
 ![History Page](templates/history.png)
-
 ## 📋 Requirements
 
-### System Requirements
-
 - **Python**: [3.10.0](https://www.python.org/downloads/release/python-3100/)
-- **GPU**: CUDA-capable GPU (recommended for faster conversion, but CPU works too)
 - **FFmpeg**: [Required for audio processing](https://ffmpeg.org/download.html)
-- **Transkun**: [Must be installed and available in your system PATH](https://github.com/Yujia-Yan/Transkun#model-cards)
-
-### Python Dependencies
-
-All Python dependencies are listed in `requirements.txt` and will be installed automatically.
+- **Transkun**: [Must be installed and in system PATH](https://github.com/Yujia-Yan/Transkun)
+- **CUDA-capable GPU** (optional, CPU works too)
 
 ## 🚀 Installation
 
@@ -46,7 +32,7 @@ cd audioconverter-web
 
 **For RTX 50xx Series GPUs (CUDA 12.9):**
 
-If you have an RTX 50xx series GPU, install PyTorch, torchvision, and torchaudio with CUDA 12.9 support first:
+If you have an RTX 50xx series GPU, install PyTorch with CUDA 12.9 support first:
 
 ```bash
 pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
@@ -60,20 +46,13 @@ Then install the remaining dependencies (excluding torch and torchaudio):
 pip install -r requirements.txt --no-deps torch torchaudio
 ```
 
-This ensures you use the CUDA 12.9 nightly version of PyTorch and compatible torchaudio instead of the standard versions.
-
 **For other GPUs or CPU-only:**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-This will install:
-- Flask (web framework)
-- PyTorch (for GPU support)
-- yt-dlp (for video downloads)
-- pretty-midi (for MIDI processing)
-- And other required packages
+This installs Flask, flask-wtf, Werkzeug, PyTorch, yt-dlp, pretty-midi, requests, flask-talisman, and pywebview.
 
 ### Step 3: Install Transkun
 
@@ -83,42 +62,11 @@ Ensure Transkun is installed and accessible from your command line:
 transkun --version
 ```
 
-If not installed, follow the [Transkun installation guide](https://github.com/Yujia-Yan/Transkun).
+If not installed, follow the [Transkun installation guide](https://github.com/Yujia-Yan/Transkun). Transkun must be in your system PATH.
 
-### Step 4: Configure YouTube Cookies (Optional but Recommended)
+### Step 4: Install FFmpeg
 
-**Note:** Cookies are only used for YouTube downloads. TikTok and Discord downloads do not require cookies.
-
-For downloading restricted or age-restricted YouTube videos, you need to add your YouTube cookies to `cookies.txt`:
-
-1. **Install a browser extension** to export cookies:
-   - Chrome/Edge: [get NETSCAPE cookies by export](https://chromewebstore.google.com/detail/hlkenndednhfkekhgcdicdfddnkalmdm?utm_source=item-share-cb)
-   - Firefox: [get NETSCAPE cookies by export](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/)
-
-2. **Export cookies from YouTube:**
-   - Navigate to [YouTube](https://www.youtube.com) in your browser
-   - Click the extension icon
-   - Select "Export" or "Get cookies.txt"
-   - Choose to export for `.youtube.com` domain
-
-3. **Save the cookies:**
-   - Copy the exported cookies content
-   - Paste it into `cookies.txt` in the project root directory
-   - The file should be in NETSCAPE format (the extension will format it correctly)
-
-4. **Verify the cookies file:**
-   - The `cookies.txt` file should start with:
-     ```
-     # Netscape HTTP Cookie File
-     # This file is generated by yt-dlp.  Do not edit.
-     ```
-   - It should contain cookies for `.youtube.com` domain
-
-**Note:** Cookies expire after some time. If downloads start failing, re-export and update your `cookies.txt` file.
-
-### Step 5: Install FFmpeg
-
-FFmpeg is required for audio processing. Install it based on your operating system:
+FFmpeg is required for audio processing. Install based on your operating system:
 
 **Windows:**
 - Download from [FFmpeg official website](https://ffmpeg.org/download.html)
@@ -136,6 +84,18 @@ sudo apt-get install ffmpeg
 brew install ffmpeg
 ```
 
+### Step 5: Configure YouTube Cookies (Optional)
+
+For downloading restricted or age-restricted YouTube videos, add your YouTube cookies to `cookies.txt`:
+
+1. Install a browser extension to export cookies:
+   - Chrome/Edge: [get NETSCAPE cookies by export](https://chromewebstore.google.com/detail/hlkenndednhfkekhgcdicdfddnkalmdm?utm_source=item-share-cb)
+   - Firefox: [get NETSCAPE cookies by export](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/)
+
+2. Export cookies from YouTube and save to `cookies.txt` in the project root directory
+
+**Note:** Cookies expire after some time. If downloads start failing, re-export and update your `cookies.txt` file.
+
 ### Step 6: Verify Installation
 
 Run a quick test to ensure everything is set up correctly:
@@ -148,296 +108,48 @@ ffmpeg -version
 
 ## 💻 Usage
 
-### Web Interface
-
-#### Option 1: Standard Flask Server
-
-Run the Flask application:
-
+Run the application:
 ```bash
 python app.py
 ```
 
-The application will start on `http://127.0.0.1:5000` and automatically open in your default browser.
-
-#### Option 2: GUI Application
-
-For a standalone window application:
-
+Or for GUI mode:
 ```bash
 python app_gui.py
 ```
 
-This opens a native window with the web interface (requires `pywebview`).
-
-### Using the Application
-
-#### Device Selection (CUDA/CPU)
-
-Before converting, you can choose your processing device:
-- **Toggle Switch**: Located next to "Model: Transkun" in the interface
-- **CPU Mode**: Left position - Use CPU for conversion (works on all systems)
-- **CUDA Mode**: Right position - Use GPU for faster conversion (requires CUDA-capable GPU)
-- **Auto-fallback**: If CUDA is selected but not available, the system automatically falls back to CPU
-- **Preference Saved**: Your device preference is saved in browser local storage
-
-#### 1. 📤 Upload MP3 File
-
-- Select your preferred device (CPU or CUDA) using the toggle switch
-- Click "Choose File" and select an MP3 file from your computer
-- Click "Convert MP3" to start the conversion
-- Wait for the conversion to complete
-- Download your MIDI file
-
-#### 2. 🔗 Convert from YouTube/TikTok/Discord
-
-- Select your preferred device (CPU or CUDA) using the toggle switch
-- Paste a YouTube, TikTok, or Discord CDN link in the input field
-- Click "Convert Link"
-- The application will:
-  - Download the video/audio file
-  - Convert it to MIDI format using your selected device
-  - Display a preview with thumbnail (if available)
-  - Provide download links
-
-**Supported URL formats:**
-- YouTube: `https://www.youtube.com/watch?v=...` or `https://youtu.be/...`
-- TikTok: `https://www.tiktok.com/...` or `https://vm.tiktok.com/...`
-- Discord: `https://cdn.discordapp.com/attachments/...` or `https://media.discordapp.net/attachments/...`
-
-#### 3. ⌨️ Convert MIDI to QWERTY Sheets
-
-- After converting to MIDI, click "Convert to QWERTY" to view the sheet
-- Or click "Download Sheets" to download the text file
-- Customize conversion settings using the "Settings" button
-
-#### 4. 🎹 Transpose Modes
-
-The application supports two transpose modes for MIDI to QWERTY sheet conversion:
-
-**Auto Transpose Mode (Default):**
-- Applies a single optimal transposition to the entire piece
-- Shows "Transpose by: X" at the beginning of the sheet
-- Best for pieces that stay in one key
-
-**Multi Transpose Mode:**
-- Automatically finds optimal transpositions for different regions (separated by line breaks)
-- Each region can have its own transposition value
-- Shows "Transpose by: X" at the start of each region
-- Displays the distance from the previous transpose in parentheses, e.g., "Transpose by: +2 (+4)"
-- Skips duplicate transpose values (only shows when the value changes)
-- Includes a "Copy Transposes" button to copy all transpose values to clipboard (space-separated)
-- Best for pieces with key changes or wide pitch ranges
-
-**To switch modes:**
-- Click the "Transpose Mode" toggle button in the sheet viewer
-- The mode preference is saved in your browser's local storage
-- The sheet automatically refreshes when you change modes
-
-### 🎛️ QWERTY Sheet Settings
-
-Access settings via the "Settings" button to customize:
-
-- **Resilience**: Transposition sensitivity (0-12)
-- **Note Placement**: Where to place shifted and out-of-range notes
-- **Line Breaks**: Manual or automatic line breaking
-- **Quantization**: Time threshold for grouping notes (milliseconds)
-- **Chord Ordering**: Classic or custom chord ordering
-- **Visual Markers**: Tempo marks, out-of-range indicators, BPM changes
-- **Auto Transpose**: Automatically transpose to optimal key
-- **Multi Transpose**: Enable multi-transpose mode (can also be toggled in the sheet viewer)
+- Toggle CPU/CUDA mode before converting
+- Upload MP3 files or paste YouTube/TikTok/Discord links
+- Convert MIDI to QWERTY sheets with customizable settings
+- Switch between Auto and Multi transpose modes in the sheet viewer
 
 ## ⚙️ Configuration
 
-### Environment Variables
-
-You can configure the application using environment variables:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SECRET_KEY` | Flask secret key for sessions | Auto-generated |
-| `UPLOAD_FOLDER` | Folder for uploaded files | `uploads` |
-| `CONVERTED_FOLDER` | Folder for converted files | `converted` |
-| `FORCE_HTTPS` | Force HTTPS connections | `false` |
-
-**Note:** File size limits and rate limiting have been disabled in the current version.
-
-### Example Configuration
-
-```bash
-export SECRET_KEY="your-secret-key-here"
-export UPLOAD_FOLDER="/path/to/uploads"
-python app.py
-```
-
-## 📁 Project Structure
-
-```
-audioconverter-web/
-├── app.py                 # Main Flask application
-├── app_gui.py            # GUI wrapper using pywebview
-├── midi_to_sheets.py     # MIDI to QWERTY sheet converter
-├── requirements.txt      # Python dependencies
-├── cookies.txt          # YouTube cookies file
-├── utils/
-│   ├── __init__.py
-│   └── system_info.py   # System information detection
-├── static/
-│   └── js/              # JavaScript modules
-│       ├── device.js           # Device toggle (CUDA/CPU)
-│       ├── settings.js         # Settings modal management
-│       ├── sheets-utils.js     # Sheet utility functions
-│       ├── history.js          # History management
-│       ├── conversion.js       # Conversion logic
-│       ├── sheets-viewer.js    # Sheet viewer modal
-│       └── ui.js               # UI interactions
-│   └── css/              # Website styles
-│       ├── style.css           # Main style
-├── templates/
-│   ├── index.html       # Web interface
-│   ├── icon.ico         # Application icon
-│   └── notfound.jpg     # Placeholder image
-├── uploads/             # Uploaded files directory
-├── converted/           # Converted files directory
-├── transkun/           # Transkun transcription module
-└── history.json        # Conversion history
-```
+Environment variables:
+- `SECRET_KEY` - Flask secret key (auto-generated)
+- `UPLOAD_FOLDER` - Upload directory (default: `uploads`)
+- `CONVERTED_FOLDER` - Output directory (default: `converted`)
+- `FORCE_HTTPS` - Force HTTPS (default: `false`)
 
 ## 🔌 API Endpoints
 
-The application provides a RESTful API for programmatic access:
-
-### Main Interface
-- `GET /` - Main web interface
-
-### Conversion Endpoints
-- `POST /api/convert` - Start video/audio conversion (YouTube/TikTok/Discord)
-  - Request body: `{"media_url": "https://...", "device": "cuda" | "cpu" | null}`
-  - `device` parameter (optional): Specify "cuda" for GPU or "cpu" for CPU processing. If omitted or null, automatically selects based on CUDA availability.
-  - Supported URLs: YouTube, TikTok, and Discord CDN links
-  - Returns: `{"task_id": "...", "status": "queued"}`
-
+- `POST /api/convert` - Start conversion: `{"media_url": "...", "device": "cuda"|"cpu"|null}`
 - `GET /api/status/<task_id>` - Check conversion status
-  - Returns: Status, progress, and result information
-
-- `POST /api/stop/<task_id>` - Cancel a running conversion
-
-### Sheet Conversion
-- `POST /api/convert-to-sheets` - Convert MIDI to QWERTY sheets
-  - Request body: `{"midi_filename": "...", "settings": {...}}`
-  - Returns: Sheet text and download URL
-
-### History & Health
-- `GET /api/history` - Get conversion history
-  - Query params: `limit` (default: 10)
-
-- `POST /api/history/delete` - Delete a history item
-  - Request body: `{"timestamp": <float>}`
-  - Returns: `{"status": "success", "message": "History item deleted"}`
-
-- `GET /api/health` - Health check endpoint
-
-### Example API Usage
-
-```bash
-# Start a conversion (auto-select device)
-curl -X POST http://127.0.0.1:5000/api/convert \
-  -H "Content-Type: application/json" \
-  -d '{"media_url": "https://www.youtube.com/watch?v=..."}'
-
-# Start a conversion with CPU
-curl -X POST http://127.0.0.1:5000/api/convert \
-  -H "Content-Type: application/json" \
-  -d '{"media_url": "https://www.youtube.com/watch?v=...", "device": "cpu"}'
-
-# Start a conversion with CUDA
-curl -X POST http://127.0.0.1:5000/api/convert \
-  -H "Content-Type: application/json" \
-  -d '{"media_url": "https://www.youtube.com/watch?v=...", "device": "cuda"}'
-
-# Convert from Discord CDN link
-curl -X POST http://127.0.0.1:5000/api/convert \
-  -H "Content-Type: application/json" \
-  -d '{"media_url": "https://cdn.discordapp.com/attachments/...", "device": "cuda"}'
-
-# Check status
-curl http://127.0.0.1:5000/api/status/<task_id>
-
-# Convert MIDI to sheets
-curl -X POST http://127.0.0.1:5000/api/convert-to-sheets \
-  -H "Content-Type: application/json" \
-  -d '{"midi_filename": "song_transkun.mid", "settings": {}}'
-```
+- `POST /api/stop/<task_id>` - Cancel conversion
+- `POST /api/convert-to-sheets` - Convert MIDI to sheets: `{"midi_filename": "...", "settings": {...}}`
+- `GET /api/history` - Get history (query: `limit`)
+- `POST /api/history/delete` - Delete history item: `{"timestamp": <float>}`
+- `GET /api/health` - Health check
+- `GET /wallpapers` - Wallpaper check
 
 ## 🐛 Troubleshooting
 
-### Common Issues
-
-#### ❌ "Transkun not found"
-- Ensure Transkun is installed and in your system PATH
-- Verify with: `transkun --version`
-- Check that the executable is accessible from your terminal
-
-#### ❌ "CUDA not available"
-- The application works on CPU, but will be slower
-- You can manually select CPU mode using the toggle switch in the interface
-- If CUDA is selected but not available, the system automatically falls back to CPU
-- For GPU support, ensure:
-  - CUDA-capable GPU is installed
-  - PyTorch with CUDA support is installed
-  - CUDA drivers are up to date
-
-#### ❌ "FFmpeg not found"
-- Install FFmpeg and add it to your system PATH
-- Verify with: `ffmpeg -version`
-
-#### ❌ "Conversion timeout"
-- Large files may take longer to process
-- Check your system resources (CPU/GPU usage)
-- Try converting smaller audio segments
-
-#### ❌ "Download failed" (YouTube/TikTok/Discord)
-- Check your internet connection
-- Verify the URL is correct and accessible
-- Some videos may have restrictions
-- For YouTube: Try using a cookies file (place `cookies.txt` in project root)
-- For Discord: Ensure the CDN link is valid and not expired
-
-### Performance Tips
-
-- 🚀 Use a CUDA-capable GPU for faster conversions
-- 💾 Ensure sufficient disk space for uploads and conversions
-- 🌐 Stable internet connection for video downloads
-- 🔧 Close other resource-intensive applications during conversion
-
-## 🔒 Security Notes
-
-- The application runs on `127.0.0.1` by default (localhost only)
-- For production deployment, use proper security measures:
-  - Set a strong `SECRET_KEY`
-  - Enable HTTPS with `FORCE_HTTPS=true`
-  - Configure firewall rules
-  - Use a reverse proxy (nginx, Apache)
-  - Consider implementing rate limiting and file size restrictions for production use
-
-## 📝 License
-
-This project is open source and available under the MIT License.
+- **Transkun not found**: Install and add to PATH
+- **CUDA not available**: App works on CPU, auto-falls back if CUDA unavailable
+- **FFmpeg not found**: Install and add to PATH
+- **Download failed**: Check connection, URL validity, or use cookies.txt for YouTube
 
 ## 🙏 Credits
 
-- 🎹 **QWERTY Sheet Converter**: Based on [midi-converter](https://github.com/ArijanJ/midi-converter) by [@ArijanJ](https://github.com/ArijanJ) and [@Albacusphetical](https://github.com/Albacusphetical)
-- 🎵 **Transkun**: For [audio-to-MIDI transcription](https://github.com/Yujia-Yan/Transkun?tab=readme-ov-file)
-- 🎨 **UI Framework**: Built with Flask, Tailwind CSS, and modern web technologies
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📧 Support
-
-For issues, questions, or feature requests, please open an issue on the GitHub repository.
-
----
-
-**Made with ❤️ for music enthusiasts**
+- **QWERTY Sheet Converter**: Based on [midi-converter](https://github.com/ArijanJ/midi-converter) by [@ArijanJ](https://github.com/ArijanJ) and [@Albacusphetical](https://github.com/Albacusphetical)
+- **Transkun**: [Audio-to-MIDI transcription](https://github.com/Yujia-Yan/Transkun)

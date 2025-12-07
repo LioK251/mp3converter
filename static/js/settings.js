@@ -116,31 +116,24 @@ const defaultSheetsSettings = {
   tempo_modal_button_hover_text: '#ffffff',
 };
 
-async function loadSheetsSettings() {
-  try {
-    const response = await fetch('/api/settings');
-    if (response.ok) {
-      const saved = await response.json();
-      if (saved && Object.keys(saved).length > 0) {
-        return { ...defaultSheetsSettings, ...saved };
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to load settings from API, trying localStorage:', e);
+let settingsCache = null;
+let settingsCachePromise = null;
+
+function loadSheetsSettingsSync() {
+  if (settingsCache !== null) {
+    return settingsCache;
   }
   
   let saved = null;
   try {
     saved = localStorage.getItem('sheetsSettings');
   } catch (e) {
-    console.warn('localStorage not available, trying pywebview:', e);
   }
   
   if (!saved && window.pywebview) {
     try {
       saved = window.pywebview.api.load_settings();
     } catch (e) {
-      console.warn('Failed to load settings via pywebview:', e);
     }
   }
   
@@ -149,13 +142,59 @@ async function loadSheetsSettings() {
       const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
       return { ...defaultSheetsSettings, ...parsed };
     } catch (e) {
-      console.error('Failed to parse saved settings:', e);
     }
   }
+  
   return defaultSheetsSettings;
 }
 
+async function loadSheetsSettings() {
+  if (settingsCache !== null) {
+    return settingsCache;
+  }
+  
+  const syncSettings = loadSheetsSettingsSync();
+  if (syncSettings && syncSettings !== defaultSheetsSettings) {
+    settingsCache = syncSettings;
+  }
+  
+  if (settingsCachePromise) {
+    const result = await settingsCachePromise;
+    settingsCache = result;
+    return result;
+  }
+  
+  settingsCachePromise = (async () => {
+    try {
+      const response = await fetch('/api/settings');
+      if (response.ok) {
+        const saved = await response.json();
+        if (saved && Object.keys(saved).length > 0) {
+          settingsCache = { ...defaultSheetsSettings, ...saved };
+          return settingsCache;
+        }
+      }
+    } catch (e) {
+    }
+    
+    if (!settingsCache) {
+      settingsCache = syncSettings;
+    }
+    
+    return settingsCache || defaultSheetsSettings;
+  })();
+  
+  const result = await settingsCachePromise;
+  settingsCachePromise = null;
+  if (!settingsCache) {
+    settingsCache = result;
+  }
+  return settingsCache || result;
+}
+
 async function saveSheetsSettings(settings) {
+  settingsCache = { ...defaultSheetsSettings, ...settings };
+  
   try {
     const response = await fetch('/api/settings', {
       method: 'POST',
@@ -189,18 +228,33 @@ async function saveSheetsSettings(settings) {
 }
 
 let wallpaperList = [];
+let wallpaperListPromise = null;
 
 async function loadWallpapers() {
-  try {
-    const response = await fetch('/api/wallpapers');
-    const data = await response.json();
-    wallpaperList = data.wallpapers || [];
+  if (wallpaperList.length > 0) {
     return wallpaperList;
-  } catch (error) {
-    console.error('Failed to load wallpapers:', error);
-    wallpaperList = [];
-    return [];
   }
+  
+  if (wallpaperListPromise) {
+    return wallpaperListPromise;
+  }
+  
+  wallpaperListPromise = (async () => {
+    try {
+      const response = await fetch('/api/wallpapers');
+      const data = await response.json();
+      wallpaperList = data.wallpapers || [];
+      return wallpaperList;
+    } catch (error) {
+      console.error('Failed to load wallpapers:', error);
+      wallpaperList = [];
+      return [];
+    }
+  })();
+  
+  const result = await wallpaperListPromise;
+  wallpaperListPromise = null;
+  return result;
 }
 
 async function populateSettingsModal(settings) {
@@ -531,7 +585,20 @@ function getSettingsFromModal() {
   };
 }
 
+let currentVideoSrc = null;
+let isVideoLoading = false;
+let videoLoadTimeout = null;
+let isInitialLoad = true;
+let currentBackground = null;
+let currentBackgroundOpacity = null;
+
 function applyBackground(background, opacity) {
+  if (currentBackground === background && currentBackgroundOpacity === opacity) {
+    return;
+  }
+  
+  currentBackground = background;
+  currentBackgroundOpacity = opacity;
   const body = document.body;
   const root = document.documentElement;
   const videoElement = document.getElementById('background-video');
@@ -540,8 +607,17 @@ function applyBackground(background, opacity) {
     body.classList.remove('has-wallpaper', 'has-wallpaper-video');
     root.style.setProperty('--wallpaper-image', 'none');
     if (videoElement) {
+      videoElement.pause();
       videoElement.style.display = 'none';
+      videoElement.preload = 'none';
       videoElement.src = '';
+      videoElement.load();
+      currentVideoSrc = null;
+      isVideoLoading = false;
+      if (videoLoadTimeout) {
+        clearTimeout(videoLoadTimeout);
+        videoLoadTimeout = null;
+      }
     }
   } else {
     const fileExt = background.toLowerCase().split('.').pop();
@@ -551,10 +627,32 @@ function applyBackground(background, opacity) {
       body.classList.remove('has-wallpaper');
       body.classList.add('has-wallpaper-video');
       root.style.setProperty('--wallpaper-image', 'none');
+      root.style.setProperty('--wallpaper-opacity', opacity);
+      
       if (videoElement) {
-        videoElement.src = `/wallpapers/${background}`;
+        const newVideoSrc = `/wallpapers/${background}`;
+        
         videoElement.style.display = 'block';
-        root.style.setProperty('--wallpaper-opacity', opacity);
+        
+        if (currentVideoSrc !== newVideoSrc && !isVideoLoading) {
+          if (videoLoadTimeout) {
+            clearTimeout(videoLoadTimeout);
+            videoLoadTimeout = null;
+          }
+          
+          isVideoLoading = true;
+          currentVideoSrc = newVideoSrc;
+          
+          videoElement.pause();
+          videoElement.src = '';
+          videoElement.load();
+          videoElement.preload = 'metadata';
+          videoElement.src = newVideoSrc;
+          
+          setTimeout(() => {
+            isVideoLoading = false;
+          }, 200);
+        }
       }
     } else {
       body.classList.remove('has-wallpaper-video');
@@ -562,10 +660,23 @@ function applyBackground(background, opacity) {
       root.style.setProperty('--wallpaper-image', `url('/wallpapers/${background}')`);
       root.style.setProperty('--wallpaper-opacity', opacity);
       if (videoElement) {
+        videoElement.pause();
         videoElement.style.display = 'none';
+        videoElement.preload = 'none';
         videoElement.src = '';
+        videoElement.load();
+        currentVideoSrc = null;
+        isVideoLoading = false;
+        if (videoLoadTimeout) {
+          clearTimeout(videoLoadTimeout);
+          videoLoadTimeout = null;
+        }
       }
     }
+  }
+  
+  if (isInitialLoad) {
+    isInitialLoad = false;
   }
 }
 
@@ -702,6 +813,8 @@ function applyColors(settings) {
   root.style.setProperty('--tempo-modal-button-hover-text', settings.tempo_modal_button_hover_text || '#ffffff');
 }
 
+let currentPreviewVideoSrc = null;
+
 function updateBackgroundPreview() {
   const backgroundSelect = document.getElementById('setting-background');
   const previewContainer = document.getElementById('wallpaper-preview-container');
@@ -717,8 +830,12 @@ function updateBackgroundPreview() {
     previewContainer.classList.add('hidden');
     preview.style.backgroundImage = 'none';
     if (previewVideo) {
+      previewVideo.pause();
       previewVideo.style.display = 'none';
+      previewVideo.preload = 'none';
       previewVideo.src = '';
+      previewVideo.load();
+      currentPreviewVideoSrc = null;
     }
   } else {
     previewContainer.classList.remove('hidden');
@@ -728,7 +845,13 @@ function updateBackgroundPreview() {
     if (isVideo) {
       preview.style.backgroundImage = 'none';
       if (previewVideo) {
-        previewVideo.src = `/wallpapers/${selectedValue}`;
+        const newPreviewSrc = `/wallpapers/${selectedValue}`;
+        if (currentPreviewVideoSrc !== newPreviewSrc) {
+          previewVideo.pause();
+          previewVideo.preload = 'metadata';
+          previewVideo.src = newPreviewSrc;
+          currentPreviewVideoSrc = newPreviewSrc;
+        }
         previewVideo.style.display = 'block';
         previewVideo.style.opacity = opacity;
       }
@@ -736,8 +859,12 @@ function updateBackgroundPreview() {
       preview.style.backgroundImage = `url('/wallpapers/${selectedValue}')`;
       preview.style.opacity = opacity;
       if (previewVideo) {
+        previewVideo.pause();
         previewVideo.style.display = 'none';
+        previewVideo.preload = 'none';
         previewVideo.src = '';
+        previewVideo.load();
+        currentPreviewVideoSrc = null;
       }
     }
   }
@@ -753,38 +880,59 @@ if (sheetsSettingsBtn) {
   sheetsSettingsBtn.addEventListener('click', async () => {
     const settings = await loadSheetsSettings();
     await populateSettingsModal(settings);
-    sheetsSettingsModal.style.opacity = '0';
-    sheetsSettingsModal.querySelector('div').style.transform = 'scale(0.95)';
-    sheetsSettingsModal.classList.remove('hidden');
+    
     requestAnimationFrame(() => {
-      sheetsSettingsModal.style.opacity = '1';
-      sheetsSettingsModal.querySelector('div').style.transform = 'scale(1)';
+      sheetsSettingsModal.classList.remove('hidden');
+      sheetsSettingsModal.style.opacity = '0';
+      const modalDiv = sheetsSettingsModal.querySelector('div');
+      if (modalDiv) modalDiv.style.transform = 'scale(0.98)';
+      
+      requestAnimationFrame(() => {
+        sheetsSettingsModal.style.opacity = '1';
+        if (modalDiv) modalDiv.style.transform = 'scale(1)';
+      });
     });
   });
 }
 
 if (closeSettingsModal) {
   closeSettingsModal.addEventListener('click', () => {
-    sheetsSettingsModal.style.opacity = '0';
-    sheetsSettingsModal.querySelector('div').style.transform = 'scale(0.95)';
-    setTimeout(() => {
-      sheetsSettingsModal.classList.add('hidden');
-      sheetsSettingsModal.style.opacity = '';
-      sheetsSettingsModal.querySelector('div').style.transform = '';
-    }, 200);
+    requestAnimationFrame(() => {
+      sheetsSettingsModal.style.opacity = '0';
+      const modalDiv = sheetsSettingsModal.querySelector('div');
+      if (modalDiv) modalDiv.style.transform = 'scale(0.98)';
+      
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            sheetsSettingsModal.classList.add('hidden');
+            sheetsSettingsModal.style.opacity = '';
+            if (modalDiv) modalDiv.style.transform = '';
+          });
+        }, 150);
+      });
+    });
   });
 }
 
 if (sheetsSettingsModal) {
   sheetsSettingsModal.addEventListener('click', (e) => {
     if (e.target === sheetsSettingsModal) {
-      sheetsSettingsModal.style.opacity = '0';
-      sheetsSettingsModal.querySelector('div').style.transform = 'scale(0.95)';
-      setTimeout(() => {
-        sheetsSettingsModal.classList.add('hidden');
-        sheetsSettingsModal.style.opacity = '';
-        sheetsSettingsModal.querySelector('div').style.transform = '';
-      }, 200);
+      requestAnimationFrame(() => {
+        sheetsSettingsModal.style.opacity = '0';
+        const modalDiv = sheetsSettingsModal.querySelector('div');
+        if (modalDiv) modalDiv.style.transform = 'scale(0.98)';
+        
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            requestAnimationFrame(() => {
+              sheetsSettingsModal.classList.add('hidden');
+              sheetsSettingsModal.style.opacity = '';
+              if (modalDiv) modalDiv.style.transform = '';
+            });
+          }, 150);
+        });
+      });
     }
   });
 }
@@ -792,16 +940,28 @@ if (sheetsSettingsModal) {
 if (saveSettingsBtn) {
   saveSettingsBtn.addEventListener('click', () => {
     const settings = getSettingsFromModal();
-    saveSheetsSettings(settings);
-    applyBackground(settings.background, settings.background_opacity);
-    applyColors(settings);
-    sheetsSettingsModal.style.opacity = '0';
-    sheetsSettingsModal.querySelector('div').style.transform = 'scale(0.95)';
-    setTimeout(() => {
-      sheetsSettingsModal.classList.add('hidden');
-      sheetsSettingsModal.style.opacity = '';
-      sheetsSettingsModal.querySelector('div').style.transform = '';
-    }, 200);
+    
+    requestAnimationFrame(() => {
+      saveSheetsSettings(settings);
+      applyBackground(settings.background, settings.background_opacity);
+      applyColors(settings);
+      
+      requestAnimationFrame(() => {
+        sheetsSettingsModal.style.opacity = '0';
+        const modalDiv = sheetsSettingsModal.querySelector('div');
+        if (modalDiv) modalDiv.style.transform = 'scale(0.98)';
+        
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            requestAnimationFrame(() => {
+              sheetsSettingsModal.classList.add('hidden');
+              sheetsSettingsModal.style.opacity = '';
+              if (modalDiv) modalDiv.style.transform = '';
+            });
+          }, 150);
+        });
+      });
+    });
   });
 }
 
@@ -829,12 +989,17 @@ document.getElementById('setting-quantize')?.addEventListener('input', (e) => {
 
 document.getElementById('setting-background')?.addEventListener('change', () => {
   updateBackgroundPreview();
+  const background = document.getElementById('setting-background').value;
+  const opacity = parseFloat(document.getElementById('setting-background-opacity').value);
+  applyBackground(background, opacity);
 });
 
 document.getElementById('setting-background-opacity')?.addEventListener('input', (e) => {
   const opacity = parseFloat(e.target.value);
   document.getElementById('background-opacity-value').textContent = Math.round(opacity * 100) + '%';
   updateBackgroundPreview();
+  const background = document.getElementById('setting-background').value;
+  applyBackground(background, opacity);
 });
 
 const colorInputs = [
@@ -861,11 +1026,25 @@ const colorInputs = [
   'setting-tempo-modal-button-text', 'setting-tempo-modal-button-hover-text'
 ];
 
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+const debouncedApplyColors = debounce(() => {
+  const settings = getSettingsFromModal();
+  applyColors(settings);
+}, 150);
+
 colorInputs.forEach(inputId => {
-  document.getElementById(inputId)?.addEventListener('input', () => {
-    const settings = getSettingsFromModal();
-    applyColors(settings);
-  });
+  document.getElementById(inputId)?.addEventListener('input', debouncedApplyColors);
 });
 
 const opacityInputs = [
@@ -1236,8 +1415,25 @@ if (matchColorsBtn) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const settings = await loadSheetsSettings();
-  await populateSettingsModal(settings);
-  applyBackground(settings.background || 'none', settings.background_opacity || 0.6);
-  applyColors(settings);
+  const syncSettings = loadSheetsSettingsSync();
+  applyBackground(syncSettings.background || 'none', syncSettings.background_opacity || 0.6);
+  applyColors(syncSettings);
+  
+  loadSheetsSettings().then(async settings => {
+    const newBackground = settings.background || 'none';
+    const newOpacity = settings.background_opacity || 0.6;
+    
+    if (currentBackground !== newBackground || currentBackgroundOpacity !== newOpacity) {
+      applyBackground(newBackground, newOpacity);
+    }
+    applyColors(settings);
+    
+    try {
+      await populateSettingsModal(settings);
+    } catch (err) {
+      console.error('Failed to populate settings modal:', err);
+    }
+  }).catch(err => {
+    console.error('Failed to load settings:', err);
+  });
 });
