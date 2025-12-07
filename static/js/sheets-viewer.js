@@ -169,6 +169,14 @@ const viewTempoModal = document.getElementById('view-tempo-modal');
 const closeTempoModal = document.getElementById('close-tempo-modal');
 const copyTempoTextBtn = document.getElementById('copy-tempo-text');
 
+function clearSheetsContent() {
+  const content = document.getElementById('tempo-text-content');
+  if (content) {
+    content.innerHTML = '<div class="text-center text-gray-400">Loading...</div>';
+  }
+  currentMidiFilename = null;
+}
+
 if (closeTempoModal) {
   closeTempoModal.addEventListener('click', () => {
     if (viewTempoModal) {
@@ -178,6 +186,7 @@ if (closeTempoModal) {
         viewTempoModal.classList.add('hidden');
         viewTempoModal.style.opacity = '';
         viewTempoModal.style.transition = '';
+        clearSheetsContent();
       }, 200);
     }
   });
@@ -187,6 +196,7 @@ if (viewTempoModal) {
   viewTempoModal.addEventListener('click', (e) => {
     if (e.target === viewTempoModal) {
       viewTempoModal.classList.add('hidden');
+      clearSheetsContent();
     }
   });
 }
