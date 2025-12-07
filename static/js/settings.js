@@ -1236,7 +1236,7 @@ if (matchColorsBtn) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const settings = loadSheetsSettings();
+  const settings = await loadSheetsSettings();
   await populateSettingsModal(settings);
   applyBackground(settings.background || 'none', settings.background_opacity || 0.6);
   applyColors(settings);
