@@ -108,7 +108,7 @@ window.viewTempoText = async function(midiFilename, title = null) {
   modal.style.transition = 'opacity 0.2s ease-in-out';
   
   try {
-    const savedSettings = loadSheetsSettings();
+    const savedSettings = await loadSheetsSettings();
     const currentTransposeMode = localStorage.getItem('transposeMode') || 'auto';
     savedSettings.multi_transpose = currentTransposeMode === 'multi';
     
@@ -138,7 +138,7 @@ window.viewTempoText = async function(midiFilename, title = null) {
       const coloredText = colorizeTempoText(data.sheet_text);
       content.innerHTML = coloredText;
       
-      const settings = loadSheetsSettings();
+      const settings = await loadSheetsSettings();
       if (settings.center_sheet_text) {
         content.classList.add('text-center');
       } else {

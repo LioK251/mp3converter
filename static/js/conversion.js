@@ -102,7 +102,7 @@ function resetButtonStates() {
   });
 }
 
-window.convertToSheets = function(event, midiFilename) {
+window.convertToSheets = async function(event, midiFilename) {
   console.log('convertToSheets called with:', midiFilename);
   
   if (event) {
@@ -127,7 +127,7 @@ window.convertToSheets = function(event, midiFilename) {
   
   console.log('Sending request to convert:', midiFilename);
   
-  const savedSettings = loadSheetsSettings();
+  const savedSettings = await loadSheetsSettings();
   const currentTransposeMode = localStorage.getItem('transposeMode') || 'auto';
   savedSettings.multi_transpose = currentTransposeMode === 'multi';
   
