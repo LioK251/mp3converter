@@ -1,16 +1,148 @@
+:root {
+    --primary-button-bg: rgba(37, 99, 235, 0.2);
+    --primary-button-border: #1d4ed8;
+    --primary-button-text: #93c5fd;
+    --primary-button-hover-bg: rgba(59, 130, 246, 0.3);
+    --primary-button-hover-border: #3b82f6;
+    
+    --secondary-button-bg: rgba(147, 51, 234, 0.2);
+    --secondary-button-border: #7e22ce;
+    --secondary-button-text: #c084fc;
+    --secondary-button-hover-bg: rgba(168, 85, 247, 0.3);
+    --secondary-button-hover-border: #a855f7;
+    
+    --success-button-bg: rgba(5, 150, 105, 0.2);
+    --success-button-border: #047857;
+    --success-button-text: #6ee7b7;
+    --success-button-hover-bg: rgba(16, 185, 129, 0.3);
+    --success-button-hover-border: #10b981;
+    
+    --text-color: #e5e7eb;
+    --text-secondary: #9ca3af;
+    --card-bg: rgba(31, 41, 55, 0.8);
+    --card-border: #374151;
+    --card-hover-border: rgba(147, 51, 234, 0.4);
+    --link-color: #9333ea;
+    --link-hover: #a855f7;
+    
+    --modal-bg: #1f2937;
+    --modal-bg-opacity: 1;
+    --modal-border: #374151;
+    --modal-text: #ffffff;
+    --modal-text-secondary: #d1d5db;
+    --modal-text-tertiary: #9ca3af;
+    --input-bg: #374151;
+    --input-border: #4b5563;
+    --input-text: #ffffff;
+    --tab-active: #9333ea;
+    --tab-inactive: #9ca3af;
+    --history-item-bg: #374151;
+    --history-item-bg-opacity: 0.4;
+    --history-item-border: #374151;
+    --history-item-hover-bg: rgba(55, 65, 81, 0.6);
+    --history-item-hover-border: rgba(147, 51, 234, 0.3);
+    --modal-backdrop: rgba(0, 0, 0, 0.5);
+    
+    --checkbox-bg: #4b5563;
+    --checkbox-checked: #9333ea;
+    --checkbox-border: #6b7280;
+    --delete-button-bg: rgba(220, 38, 38, 0.3);
+    --delete-button-border: #b91c1c;
+    --delete-button-text: #fca5a5;
+    --delete-button-hover-bg: rgba(239, 68, 68, 0.5);
+    --badge-youtube-bg: rgba(220, 38, 38, 0.3);
+    --badge-youtube-border: #b91c1c;
+    --badge-youtube-text: #fca5a5;
+    --badge-tiktok-bg: rgba(147, 51, 234, 0.3);
+    --badge-tiktok-border: #7e22ce;
+    --badge-tiktok-text: #c084fc;
+    --badge-discord-bg: rgba(99, 102, 241, 0.3);
+    --badge-discord-border: #4f46e5;
+    --badge-discord-text: #a5b4fc;
+    --badge-mp3-bg: rgba(99, 102, 241, 0.3);
+    --badge-mp3-border: #4f46e5;
+    --badge-mp3-text: #a5b4fc;
+    --tempo-modal-bg: #1f2937;
+    --tempo-modal-bg-opacity: 1;
+    --tempo-modal-border: #374151;
+    --tempo-modal-text: #9ca3af;
+    --tempo-modal-backdrop: rgba(0, 0, 0, 0.5);
+    --custom-modal-bg: #1f2937;
+    --custom-modal-bg-opacity: 1;
+    --custom-modal-border: #374151;
+    --custom-modal-backdrop: rgba(0, 0, 0, 0.5);
+    --modal-close-bg: transparent;
+    --modal-close-text: #9ca3af;
+    --modal-close-hover-text: #ffffff;
+    --modal-action-primary-bg: rgba(147, 51, 234, 1);
+    --modal-action-primary-text: #ffffff;
+    --modal-action-primary-hover-bg: rgba(126, 34, 206, 1);
+    --modal-action-secondary-bg: rgba(55, 65, 81, 1);
+    --modal-action-secondary-text: #ffffff;
+    --modal-action-secondary-hover-bg: rgba(75, 85, 99, 1);
+    --tempo-modal-button-text: #9ca3af;
+    --tempo-modal-button-hover-text: #ffffff;
+}
+
 body {
     background: linear-gradient(-45deg, #1f2937, #374151, #111827, #1f2937);
     background-size: 400% 400%;
     animation: gradient 15s ease infinite;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: var(--text-color);
+}
+
+body.has-wallpaper {
+    background: linear-gradient(-45deg, rgba(31, 41, 55, 0.85), rgba(55, 65, 81, 0.85), rgba(17, 24, 39, 0.85), rgba(31, 41, 55, 0.85));
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+body.has-wallpaper::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: var(--wallpaper-image);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    z-index: -1;
+    opacity: var(--wallpaper-opacity, 0.6);
+    transition: opacity 0.3s ease, background-image 0.3s ease;
+}
+
+body.has-wallpaper-video::before {
+    display: none;
+}
+
+body.has-wallpaper-video #background-video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+    opacity: var(--wallpaper-opacity, 0.6);
+    transition: opacity 0.3s ease;
 }
 #system-info-box {
-    border-color: rgba(55, 65, 81, 1) !important;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
     transform: translateY(0) !important;
     transition: all 0.3s ease;
 }
+
 #system-info-box:hover {
-    border-color: rgba(147, 51, 234, 0.4) !important;
+    border-color: var(--card-hover-border) !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
     transform: translateY(-2px) !important;
 }
@@ -41,9 +173,9 @@ input[type="file"]:focus, input[type="file"]:active, input[type="file"]:focus-vi
     box-shadow: none !important;
 }
 input[type="file"]::-webkit-file-upload-button {
-    background-color: rgba(37, 99, 235, 0.2) !important;
-    border: 1px solid rgba(29, 78, 216, 1) !important;
-    color: rgb(147, 197, 253) !important;
+    background-color: var(--primary-button-bg) !important;
+    border: 1px solid var(--primary-button-border) !important;
+    color: var(--primary-button-text) !important;
     font-size: 0.875rem !important;
     font-weight: 500 !important;
     padding: 6px 12px !important;
@@ -52,19 +184,19 @@ input[type="file"]::-webkit-file-upload-button {
     transition: all 0.3s ease !important;
 }
 input[type="file"]:hover::-webkit-file-upload-button {
-    background-color: rgba(37, 99, 235, 0.3) !important;
+    background-color: var(--primary-button-hover-bg) !important;
 }
 input[type="file"]::-webkit-file-upload-button:focus, input[type="file"]::-webkit-file-upload-button:active {
     outline: none !important;
-    background-color: rgba(37, 99, 235, 0.2) !important;
+    background-color: var(--primary-button-bg) !important;
 }
 input[type="file"]:active::-webkit-file-upload-button {
-    background-color: rgba(37, 99, 235, 0.25) !important;
+    background-color: var(--primary-button-hover-bg) !important;
 }
 input[type="file"]::file-selector-button {
-    background-color: rgba(37, 99, 235, 0.2) !important;
-    border: 1px solid rgba(29, 78, 216, 1) !important;
-    color: rgb(147, 197, 253) !important;
+    background-color: var(--primary-button-bg) !important;
+    border: 1px solid var(--primary-button-border) !important;
+    color: var(--primary-button-text) !important;
     font-size: 0.875rem !important;
     font-weight: 500 !important;
     padding: 6px 12px !important;
@@ -73,10 +205,299 @@ input[type="file"]::file-selector-button {
     transition: all 0.3s ease !important;
 }
 input[type="file"]:hover::file-selector-button {
-    background-color: rgba(37, 99, 235, 0.3) !important;
+    background-color: var(--primary-button-hover-bg) !important;
 }
 input[type="file"]:active::file-selector-button {
-    background-color: rgba(37, 99, 235, 0.25) !important;
+    background-color: var(--primary-button-hover-bg) !important;
+}
+
+.button-primary,
+#convert-button,
+#convert-button-youtube,
+.view-tempo-btn,
+#refresh-history-btn {
+    background-color: var(--primary-button-bg) !important;
+    border-color: var(--primary-button-border) !important;
+    color: var(--primary-button-text) !important;
+}
+
+.button-primary:hover,
+#convert-button:hover,
+#convert-button-youtube:hover,
+.view-tempo-btn:hover,
+#refresh-history-btn:hover {
+    background-color: var(--primary-button-hover-bg) !important;
+    border-color: var(--primary-button-hover-border) !important;
+}
+
+.button-secondary,
+#sheets-settings-btn,
+.download-sheets-btn {
+    background-color: var(--secondary-button-bg) !important;
+    border-color: var(--secondary-button-border) !important;
+    color: var(--secondary-button-text) !important;
+}
+
+.button-secondary:hover,
+#sheets-settings-btn:hover,
+.download-sheets-btn:hover {
+    background-color: var(--secondary-button-hover-bg) !important;
+    border-color: var(--secondary-button-hover-border) !important;
+}
+
+.button-success,
+.download-midi-btn,
+a.download-midi-btn {
+    background-color: var(--success-button-bg) !important;
+    border-color: var(--success-button-border) !important;
+    color: var(--success-button-text) !important;
+}
+
+.button-success:hover,
+.download-midi-btn:hover,
+a.download-midi-btn:hover {
+    background-color: var(--success-button-hover-bg) !important;
+    border-color: var(--success-button-hover-border) !important;
+}
+
+body {
+    color: var(--text-color);
+}
+
+.text-secondary,
+.text-gray-400 {
+    color: var(--text-secondary) !important;
+}
+
+.main-card,
+.history-card,
+#system-info-box {
+    background-color: var(--card-bg) !important;
+    border-color: var(--card-border) !important;
+}
+
+a {
+    color: var(--link-color);
+}
+
+a:hover {
+    color: var(--link-hover);
+}
+
+#sheets-settings-modal {
+    background-color: var(--modal-backdrop) !important;
+}
+
+#sheets-settings-modal > div {
+    background-color: var(--modal-bg) !important;
+    border-color: var(--modal-border) !important;
+    color: var(--modal-text) !important;
+}
+
+#sheets-settings-modal > div > div:last-child {
+    background-color: var(--modal-bg) !important;
+}
+
+#sheets-settings-modal h3,
+#sheets-settings-modal label,
+#sheets-settings-modal .text-white {
+    color: var(--modal-text) !important;
+}
+
+#sheets-settings-modal .text-gray-300,
+#sheets-settings-modal .text-gray-400 {
+    color: var(--modal-text-secondary) !important;
+}
+
+#sheets-settings-modal input[type="text"],
+#sheets-settings-modal input[type="range"],
+#sheets-settings-modal select,
+input[type="text"],
+input[type="range"],
+select {
+    background-color: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--input-text) !important;
+}
+
+#sheets-settings-modal input[type="color"] {
+    border-color: var(--input-border) !important;
+}
+
+.tab-button {
+    color: var(--tab-inactive) !important;
+}
+
+.tab-button.active {
+    color: var(--tab-active) !important;
+}
+
+.tab-button.active::after {
+    background: var(--tab-active) !important;
+}
+
+.history-item {
+    background-color: var(--history-item-bg) !important;
+    border-color: var(--history-item-border) !important;
+    opacity: 1 !important;
+}
+
+
+input[type="checkbox"] {
+    accent-color: var(--checkbox-checked) !important;
+}
+
+label .peer-checked\:bg-purple-600,
+.peer:checked ~ .peer-checked\:bg-purple-600,
+.peer:checked + .peer-checked\:bg-purple-600 {
+    background-color: var(--checkbox-checked) !important;
+}
+
+label .bg-gray-600.peer,
+label .bg-gray-600 {
+    background-color: var(--checkbox-bg) !important;
+    border-color: var(--checkbox-border) !important;
+}
+
+#device-toggle-switch {
+    background-color: var(--checkbox-bg) !important;
+    border-color: var(--checkbox-border) !important;
+}
+
+#device-toggle:checked ~ #device-toggle-switch,
+#device-toggle:checked + #device-toggle-switch {
+    background-color: var(--checkbox-checked) !important;
+}
+
+.delete-history-btn {
+    background-color: var(--delete-button-bg) !important;
+    border-color: var(--delete-button-border) !important;
+    color: var(--delete-button-text) !important;
+}
+
+.delete-history-btn:hover {
+    background-color: var(--delete-button-hover-bg) !important;
+}
+
+.badge-youtube {
+    background-color: var(--badge-youtube-bg) !important;
+    border-color: var(--badge-youtube-border) !important;
+    color: var(--badge-youtube-text) !important;
+}
+
+.badge-tiktok {
+    background-color: var(--badge-tiktok-bg) !important;
+    border-color: var(--badge-tiktok-border) !important;
+    color: var(--badge-tiktok-text) !important;
+}
+
+.badge-discord {
+    background-color: var(--badge-discord-bg) !important;
+    border-color: var(--badge-discord-border) !important;
+    color: var(--badge-discord-text) !important;
+}
+
+.badge-mp3 {
+    background-color: var(--badge-mp3-bg) !important;
+    border-color: var(--badge-mp3-border) !important;
+    color: var(--badge-mp3-text) !important;
+}
+
+.download-midi-btn {
+    background-color: var(--success-button-bg) !important;
+    border-color: var(--success-button-border) !important;
+    color: var(--success-button-text) !important;
+}
+
+.download-midi-btn:hover {
+    background-color: var(--success-button-hover-bg) !important;
+}
+
+#view-tempo-modal {
+    background-color: var(--tempo-modal-backdrop) !important;
+}
+
+#tempo-modal-content {
+    background-color: var(--tempo-modal-bg) !important;
+    border-color: var(--tempo-modal-border) !important;
+}
+
+#tempo-modal-title {
+    color: var(--tempo-modal-text) !important;
+}
+
+#tempo-modal-header button,
+#tempo-modal-buttons button {
+    color: var(--tempo-modal-button-text) !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+#tempo-modal-header button:hover,
+#tempo-modal-buttons button:hover {
+    color: var(--tempo-modal-button-hover-text) !important;
+    background: transparent !important;
+}
+
+#custom-modal {
+    background-color: var(--custom-modal-backdrop) !important;
+}
+
+#custom-modal > div {
+    background-color: var(--custom-modal-bg) !important;
+    border-color: var(--custom-modal-border) !important;
+}
+
+#close-settings-modal,
+#modal-close,
+#close-tempo-modal,
+#tempo-modal-header button,
+#tempo-modal-buttons button {
+    background: transparent !important;
+    border: none !important;
+    color: var(--modal-close-text) !important;
+}
+
+#close-settings-modal:hover,
+#modal-close:hover,
+#close-tempo-modal:hover {
+    color: var(--modal-close-hover-text) !important;
+}
+
+#save-settings {
+    background-color: var(--modal-action-primary-bg) !important;
+    color: var(--modal-action-primary-text) !important;
+}
+
+#save-settings:hover {
+    background-color: var(--modal-action-primary-hover-bg) !important;
+}
+
+#reset-settings {
+    background-color: var(--modal-action-secondary-bg) !important;
+    color: var(--modal-action-secondary-text) !important;
+}
+
+#reset-settings:hover {
+    background-color: var(--modal-action-secondary-hover-bg) !important;
+}
+
+#modal-buttons button {
+    background-color: var(--modal-action-primary-bg) !important;
+    color: var(--modal-action-primary-text) !important;
+}
+
+#modal-buttons button:hover {
+    background-color: var(--modal-action-primary-hover-bg) !important;
+}
+
+#modal-buttons button.secondary {
+    background-color: var(--modal-action-secondary-bg) !important;
+    color: var(--modal-action-secondary-text) !important;
+}
+
+#modal-buttons button.secondary:hover {
+    background-color: var(--modal-action-secondary-hover-bg) !important;
 }
 input[type="text"]:hover, select:hover {
     background-color: #4b5563;
@@ -97,13 +518,11 @@ input[type="text"]:focus, select:focus {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
-.main-card:hover {
-    border-color: rgba(147, 51, 234, 0.4);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
+.main-card:hover,
 .history-card:hover {
-    border-color: rgba(147, 51, 234, 0.4);
+    border-color: var(--card-hover-border) !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
 }
 .history-item {
     transition: all 0.3s ease;
@@ -138,8 +557,8 @@ input[type="text"]:focus, select:focus {
 }
 .history-item:hover {
     transform: translateY(-2px);
-    background: rgba(55, 65, 81, 0.6);
-    border-color: rgba(147, 51, 234, 0.3);
+    background-color: var(--history-item-hover-bg) !important;
+    border-color: var(--history-item-hover-border) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 .history-item img {

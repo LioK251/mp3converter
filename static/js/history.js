@@ -88,13 +88,13 @@ function createHistoryItemHTML(item) {
   html += '<div class="flex items-start gap-3">';
   
   if (item.type === 'youtube') {
-    html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-red-600/30 text-red-300 border border-red-700">YouTube</span>';
+    html += '<span class="badge-youtube px-2 py-0.5 text-[10px] rounded-full bg-red-600/30 text-red-300 border border-red-700">YouTube</span>';
   } else if (item.type === 'tiktok') {
-    html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-purple-600/30 text-purple-200 border border-purple-700">TikTok</span>';
+    html += '<span class="badge-tiktok px-2 py-0.5 text-[10px] rounded-full bg-purple-600/30 text-purple-200 border border-purple-700">TikTok</span>';
   } else if (item.type === 'discord') {
-    html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">Discord</span>';
+    html += '<span class="badge-discord px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">Discord</span>';
   } else {
-    html += '<span class="px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">MP3</span>';
+    html += '<span class="badge-mp3 px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">MP3</span>';
   }
   
   html += '</div>';
@@ -173,7 +173,7 @@ function createHistoryItemHTML(item) {
   html += '</div>';
   if (item.midi_name) {
     const downloadUrl = item.download_url || `/converted/${item.midi_name}`;
-    html += `<a class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect" href="${downloadUrl}" download>`;
+    html += `<a class="download-midi-btn inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect" href="${downloadUrl}" download>`;
     html += 'Download MIDI';
     html += '</a>';
     html += '<div class="mt-1 flex gap-2">';

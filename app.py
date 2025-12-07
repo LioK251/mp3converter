@@ -34,6 +34,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 UPLOAD_FOLDER = "uploads"
 CONVERTED_FOLDER = "converted"
 HISTORY_FILE = "history.json"
+SETTINGS_FILE = "settings.json"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CONVERTED_FOLDER, exist_ok=True)
 
@@ -863,6 +864,24 @@ def serve_template_file(filename):
         logger.error(f"Error serving template file {filename}: {e}")
         abort(404)
 
+@app.route("/wallpapers/<path:filename>")
+def serve_wallpaper(filename):
+    try:
+        if not filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm', '.mov')):
+            abort(404)
+        
+        wallpapers_folder = os.path.join(app.root_path, 'wallpapers')
+        return send_from_directory(
+            wallpapers_folder,
+            filename,
+            as_attachment=False
+        )
+    except FileNotFoundError:
+        abort(404)
+    except Exception as e:
+        logger.error(f"Error serving wallpaper {filename}: {e}")
+        abort(404)
+
 
 @app.after_request
 def add_csp(response):
@@ -1228,6 +1247,38 @@ def api_delete_history():
         return jsonify({"error": str(e)}), 500
 
 @csrf.exempt
+@app.route("/api/settings", methods=["GET"])
+def api_get_settings():
+    """API endpoint to get settings from settings.json"""
+    try:
+        if os.path.exists(SETTINGS_FILE):
+            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                settings = json.load(f)
+                return jsonify(settings)
+        else:
+            return jsonify({}), 200
+    except Exception as e:
+        logger.error(f"API get settings error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@csrf.exempt
+@app.route("/api/settings", methods=["POST"])
+def api_save_settings():
+    """API endpoint to save settings to settings.json"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({"status": "success", "message": "Settings saved"})
+    except Exception as e:
+        logger.error(f"API save settings error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@csrf.exempt
 @app.route("/api/convert-to-sheets", methods=["POST"])
 def api_convert_to_sheets():
     try:
@@ -1325,6 +1376,36 @@ def api_upload_midi():
         return jsonify({"error": str(e)}), 500
 
 @csrf.exempt
+@csrf.exempt
+@app.route("/api/wallpapers", methods=["GET"])
+def api_list_wallpapers():
+    """API endpoint to list available wallpapers"""
+    try:
+        wallpapers_folder = os.path.join(app.root_path, 'wallpapers')
+        if not os.path.exists(wallpapers_folder):
+            return jsonify({"wallpapers": []})
+        
+        allowed_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm', '.mov')
+        wallpapers = []
+        
+        for filename in os.listdir(wallpapers_folder):
+            if filename.lower().endswith(allowed_extensions):
+                file_ext = filename.lower().split('.')[-1]
+                is_video = file_ext in ('mp4', 'webm', 'mov')
+                wallpapers.append({
+                    "filename": filename,
+                    "url": f"/wallpapers/{filename}",
+                    "type": "video" if is_video else "image"
+                })
+        
+        # Sort alphabetically
+        wallpapers.sort(key=lambda x: x["filename"])
+        
+        return jsonify({"wallpapers": wallpapers})
+    except Exception as e:
+        logger.error(f"Error listing wallpapers: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/history.json", methods=["GET"])
 def serve_history_json():
     ensure_history_file()

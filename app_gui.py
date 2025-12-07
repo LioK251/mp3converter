@@ -71,7 +71,7 @@ def main():
     
     import json
     
-    SETTINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sheets_settings.json')
+    SETTINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'settings.json')
     
     def save_settings(settings_json):
         try:
