@@ -1,6 +1,8 @@
 import pretty_midi
 from typing import Dict
 
+pretty_midi.pretty_midi.MAX_TICK = 1e10
+
 VP_SCALE = (
     '1234567890qwert' +
     '1!2@34$5%6^78*9(0' +

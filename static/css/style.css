@@ -728,20 +728,37 @@ iframe:hover {
 }
 .small-scrollbar {
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+.small-scrollbar:hover {
     scrollbar-color: #9333ea transparent;
 }
 .small-scrollbar::-webkit-scrollbar {
     width: 8px;
 }
+.small-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+.small-scrollbar::-webkit-scrollbar-button:start:decrement,
+.small-scrollbar::-webkit-scrollbar-button:end:increment {
+    display: none;
+    width: 0;
+    height: 0;
+}
 .small-scrollbar::-webkit-scrollbar-track {
     background: transparent;
 }
 .small-scrollbar::-webkit-scrollbar-thumb {
-    background: #9333ea;
+    background: transparent;
     border-radius: 4px;
     transition: background 0.2s ease;
 }
-.small-scrollbar::-webkit-scrollbar-thumb:hover {
+.small-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: #9333ea;
+}
+.small-scrollbar:hover::-webkit-scrollbar-thumb:hover {
     background: #a855f7;
 }
 .history-card {
@@ -904,4 +921,13 @@ iframe:hover {
 }
 #tempo-text-content {
     transition: all 0.3s ease;
+    overflow-x: hidden !important;
+    overflow-y: auto;
+}
+.small-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 0px;
+}
+.small-scrollbar::-webkit-scrollbar:horizontal {
+    display: none;
 }
