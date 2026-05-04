@@ -6,12 +6,14 @@ import os
 import shutil
 import subprocess
 import webbrowser
-from flask import Flask, request, render_template, send_from_directory, flash, g, url_for, abort, jsonify
+import sys
+from flask import Flask, request, render_template, send_from_directory, send_file, flash, g, url_for, abort, jsonify
 from threading import Timer, Thread, Event
 import yt_dlp
 import re
 import time
 import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 import torch
 import logging
 import json
@@ -21,17 +23,24 @@ import requests
 import hashlib
 from urllib.parse import urlparse
 import uuid
+import pretty_midi
+
+from console_ui import cmd_log, install_pretty_console, print_banner, set_console_title
+
+install_pretty_console(logging.INFO)
+STARTUP_WARNINGS = []
 
 try:
     from midi_to_sheets import convert_midi_to_sheets
     HAS_MIDI_TO_SHEETS = True
 except ImportError as e:
     HAS_MIDI_TO_SHEETS = False
-    print(f"Warning: MIDI to sheets converter not available: {e}")
+    STARTUP_WARNINGS.append(f"MIDI to sheets converter not available: {e}")
 
-warnings.filterwarnings("ignore", category=UserWarning)
-
-ALLOWED_EXTENSIONS = {"mp3"}
+ALLOWED_EXTENSIONS = {
+    "mp3", "wav", "flac", "m4a", "aac", "ogg", "opus", "wma",
+    "mp4", "webm", "avi", "mov", "mkv", "flv", "wmv", "m4v"
+}
 ALLOWED_MIDI_EXTENSIONS = {"mid", "midi"}
 HISTORY_FILE = "history.json"
 SETTINGS_FILE = "settings.json"
@@ -40,6 +49,83 @@ UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "uploads")
 CONVERTED_FOLDER = os.environ.get("CONVERTED_FOLDER", "converted")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CONVERTED_FOLDER, exist_ok=True)
+
+COMMON_MACOS_BIN_DIRS = (
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/opt/local/bin",
+)
+if sys.platform == "win32":
+    COMMON_FLUIDSYNTH_PATHS = (
+        os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "FluidSynth", "bin", "fluidsynth.exe"),
+        os.path.join(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), "FluidSynth", "bin", "fluidsynth.exe"),
+        os.path.join(os.environ.get("LOCALAPPDATA", ""), "FluidSynth", "bin", "fluidsynth.exe"),
+        r"C:\tools\fluidsynth\bin\fluidsynth.exe",
+    )
+else:
+    COMMON_FLUIDSYNTH_PATHS = (
+        "/opt/homebrew/bin/fluidsynth",
+        "/usr/local/bin/fluidsynth",
+        "/opt/local/bin/fluidsynth",
+        "/Applications/FluidSynth.app/Contents/MacOS/fluidsynth",
+    )
+
+def ensure_common_tool_paths():
+    path_parts = os.environ.get("PATH", "").split(os.pathsep)
+    extra_paths = [
+        path for path in COMMON_MACOS_BIN_DIRS
+        if os.path.isdir(path) and path not in path_parts
+    ]
+    if extra_paths:
+        os.environ["PATH"] = os.pathsep.join(extra_paths + path_parts)
+
+ensure_common_tool_paths()
+
+def yt_dlp_js_runtime_options() -> dict:
+    for runtime in ("deno", "node", "quickjs", "bun"):
+        runtime_path = shutil.which(runtime)
+        if runtime_path:
+            return {"js_runtimes": {runtime: {"path": runtime_path}}}
+    return {}
+
+def compact_tool_output(output: str | None, max_lines: int = 6, max_chars: int = 900) -> str:
+    if not output:
+        return ""
+
+    cleaned_lines = [
+        re.sub(r"\s+", " ", line).strip()
+        for line in str(output).replace("\r", "\n").splitlines()
+    ]
+    cleaned_lines = [line for line in cleaned_lines if line]
+    if not cleaned_lines:
+        return ""
+
+    summary = " | ".join(cleaned_lines[-max_lines:])
+    if len(summary) > max_chars:
+        return summary[: max_chars - 3] + "..."
+    return summary
+
+class YtDlpConsoleLogger:
+    def debug(self, message):
+        return
+
+    def warning(self, message):
+        details = compact_tool_output(message, max_lines=1, max_chars=500)
+        if details:
+            logger.warning("yt-dlp: %s", details)
+
+    def error(self, message):
+        details = compact_tool_output(message, max_lines=2, max_chars=700)
+        if details:
+            logger.error("yt-dlp: %s", details)
+
+def quiet_yt_dlp_options() -> dict:
+    return {
+        "quiet": True,
+        "no_warnings": False,
+        "noprogress": True,
+        "logger": YtDlpConsoleLogger(),
+    }
 
 ALLOWED_THUMBNAIL_DOMAINS = (
     "ytimg.com",
@@ -91,17 +177,21 @@ def handle_csrf_error(e):
     from flask import render_template
     return render_template('index.html', **({'history': prepare_history_for_ui(load_history())} if 'prepare_history_for_ui' in globals() else {})), 400
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("audio::server")
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
+logging.getLogger("utils.system_info").setLevel(logging.WARNING)
 
 handler = RotatingFileHandler('app.log', maxBytes=5_000_000, backupCount=3)
 handler.setLevel(logging.INFO)
+handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s"))
 app.logger.addHandler(handler)
+logger.addHandler(handler)
 
 try:
     from flask_talisman import Talisman
 except Exception as exc:
-    logger.warning('Flask-Talisman not active: %s', exc)
+    STARTUP_WARNINGS.append(f"Flask-Talisman not active: {exc}")
 else:
     force_https = os.environ.get('FORCE_HTTPS', '').strip().lower() in {'1', 'true', 'yes'}
     Talisman(
@@ -118,8 +208,29 @@ else:
         session_cookie_samesite='Lax',
     )
 
-print("PyTorch CUDA version:", torch.version.cuda)
-print("CUDA available:", torch.cuda.is_available())
+logger.debug("PyTorch CUDA available: %s", torch.cuda.is_available())
+
+def torch_mps_available() -> bool:
+    try:
+        return hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+    except Exception:
+        return False
+
+def resolve_transkun_device(device=None) -> str:
+    if device is None or device in {"", "auto", "gpu"}:
+        if torch.cuda.is_available():
+            return "cuda"
+        if torch_mps_available():
+            return "mps"
+        return "cpu"
+    if device == "cuda" and not torch.cuda.is_available():
+        return "cpu"
+    if device == "mps" and not torch_mps_available():
+        return "cpu"
+    if device not in {"cpu", "cuda", "mps"}:
+        return resolve_transkun_device(None)
+    return device
+
 def ensure_history_file():
     if not os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
@@ -376,9 +487,8 @@ def download_mp3_from_youtube(youtube_url: str, output_dir: str,
     outtmpl = os.path.join(output_dir, '%(title)s.%(ext)s')
     
     format_selectors = [
-        'bestaudio[ext=m4a][abr>=256]/bestaudio[ext=m4a]/bestaudio[ext=webm][abr>=256]/bestaudio[ext=webm]/bestaudio[ext=opus][abr>=256]/bestaudio[ext=opus]/bestaudio[ext!=mhtml]/best[ext!=mhtml]',
+        'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio[ext=opus]/bestaudio[ext!=mhtml]/best[ext!=mhtml]',
         'bestaudio[ext!=mhtml]/best[ext!=mhtml]',
-        'bestaudio/best[ext!=mhtml]',
         'bestaudio/best',
     ]
     
@@ -392,16 +502,23 @@ def download_mp3_from_youtube(youtube_url: str, output_dir: str,
             'outtmpl': outtmpl,
             'restrictfilenames': True,
             'noplaylist': True,
-            'quiet': False,
-            'no_warnings': True,
             'ignoreerrors': True,
             'writesubtitles': False,
+            'remote_components': ['ejs:github'],
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['default'],
+                    'webpage_client': ['web_safari'],
+                },
+            },
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
                 'preferredquality': '320',
             }],
         }
+        ydl_opts.update(quiet_yt_dlp_options())
+        ydl_opts.update(yt_dlp_js_runtime_options())
 
         if cookiefile:
             ydl_opts['cookiefile'] = cookiefile
@@ -445,7 +562,7 @@ def download_mp3_from_youtube(youtube_url: str, output_dir: str,
                 if result.returncode == 0 and os.path.exists(src_mp3):
                     try:
                         os.remove(original_file)
-                    except:
+                    except OSError:
                         pass
                 else:
                     error_msg = result.stderr.decode('utf-8', errors='ignore') if result.stderr else 'Unknown error'
@@ -485,12 +602,11 @@ def download_mp3_from_tiktok(tiktok_url: str, output_dir: str,
     outtmpl = os.path.join(output_dir, '%(title)s.%(ext)s')
     
     ydl_opts: dict = {
+        'proxy': 'http://gSgLbY:8ktUfE@103.78.189.230:8000',
         'format': 'bestaudio/best',
         'outtmpl': outtmpl,
         'restrictfilenames': True,
         'noplaylist': True,
-        'quiet': False,
-        'no_warnings': True,
         'ignoreerrors': True,
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
@@ -498,6 +614,7 @@ def download_mp3_from_tiktok(tiktok_url: str, output_dir: str,
             'preferredquality': '320',
         }],
     }
+    ydl_opts.update(quiet_yt_dlp_options())
 
     if cookiefile:
         ydl_opts['cookiefile'] = cookiefile
@@ -545,8 +662,6 @@ def download_mp3_from_discord(discord_url: str, output_dir: str,
         'outtmpl': outtmpl,
         'restrictfilenames': True,
         'noplaylist': True,
-        'quiet': False,
-        'no_warnings': True,
         'ignoreerrors': True,
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
@@ -554,6 +669,7 @@ def download_mp3_from_discord(discord_url: str, output_dir: str,
             'preferredquality': '320',
         }],
     }
+    ydl_opts.update(quiet_yt_dlp_options())
 
     if cookiefile:
         ydl_opts['cookiefile'] = cookiefile
@@ -589,24 +705,74 @@ def download_mp3_from_discord(discord_url: str, output_dir: str,
     return dest_path, video_title, thumbnail_url
 
 
+def convert_to_mp3(input_path: str, output_path: str) -> str:
+    try:
+        ffmpeg_cmd = [
+            'ffmpeg', '-i', input_path,
+            '-vn', '-acodec', 'libmp3lame', '-ab', '320k',
+            '-ar', '44100', '-y', output_path
+        ]
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, timeout=600, text=True)
+        if result.returncode != 0:
+            error_msg = result.stderr if result.stderr else 'Unknown error'
+            raise FileNotFoundError(f'FFmpeg conversion failed: {error_msg}')
+        if not os.path.exists(output_path):
+            raise FileNotFoundError('MP3 file not created after conversion')
+        return output_path
+    except FileNotFoundError as e:
+        if 'ffmpeg' in str(e).lower():
+            raise FileNotFoundError('FFmpeg not found. Please install FFmpeg to convert audio/video.')
+        raise
+    except subprocess.TimeoutExpired:
+        raise TimeoutError('FFmpeg conversion timed out (10 minutes)')
+    except Exception as e:
+        raise Exception(f'Failed to convert to MP3: {str(e)}')
+
 def convert_to_midi(input_path, output_path, device=None):
     try:
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        elif device == "cuda" and not torch.cuda.is_available():
-            device = "cpu"
-        print(f"Using transkun for MIDI conversion with device: {device}")
+        device = resolve_transkun_device(device)
+        cmd_log(
+            logger,
+            "i",
+            "Transkun started: %s -> %s (device: %s)",
+            os.path.basename(input_path),
+            os.path.basename(output_path),
+            device,
+        )
+        transkun_cmd = shutil.which("transkun")
+        if transkun_cmd:
+            cmd = [transkun_cmd, input_path, output_path, "--device", device]
+        else:
+            cmd = [sys.executable, "-m", "transkun.transcribe", input_path, output_path, "--device", device]
         subprocess.run(
-            ["transkun", input_path, output_path, "--device", device],
-            capture_output=False,
+            cmd,
+            capture_output=True,
             text=True,
             check=True,
         )
+        cmd_log(logger, "+", "Transkun finished: %s", os.path.basename(output_path))
         return "transkun"
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            "Transkun not found. Install it with: python3 -m pip install transkun"
+        )
     except subprocess.CalledProcessError as e:
-        print(f"Transkun failed: {e.stderr}")
+        details = compact_tool_output(e.stderr or e.stdout)
+        if details:
+            cmd_log(logger, "-", "Transkun failed: %s", details, level=logging.ERROR)
+        else:
+            cmd_log(logger, "-", "Transkun failed with exit code %s", e.returncode, level=logging.ERROR)
+        if e.returncode == 1 and not shutil.which("transkun"):
+            raise RuntimeError(
+                "Transkun is not installed for this Python. Install it with: python3 -m pip install transkun"
+            ) from e
         raise
+from functools import lru_cache
 from utils.system_info import get_system_info
+
+@lru_cache(maxsize=1)
+def get_cached_system_info():
+    return get_system_info()
 
 @app.before_request
 def set_csp_nonce():
@@ -618,7 +784,7 @@ def inject_csp_nonce():
 
 @app.context_processor
 def inject_system_info():
-    return {"system_info": get_system_info()}
+    return {"system_info": get_cached_system_info()}
 
 @app.route("/", methods=["GET", "POST"])
 def upload_file():
@@ -637,41 +803,60 @@ def upload_file():
 
         if "file" in request.files:
             f = request.files["file"]
-            if f and f.filename:
-                if not allowed_file(f.filename):
-                    flash("Only .mp3 files are allowed")
-                    return render_with_history()
-            else:
+            if not f or not f.filename:
                 flash("No file selected")
+                return render_with_history()
+
+            if not allowed_file(f.filename):
+                flash(f"Unsupported file format. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}")
                 return render_with_history()
 
             raw_name = secure_filename(f.filename)
             sanitized_name = sanitize_filename(raw_name)
             _, ext = os.path.splitext(sanitized_name)
-            if not sanitized_name:
-                sanitized_name = 'upload.mp3'
-            elif ext.lower() != '.mp3':
-                sanitized_name = f"{sanitized_name}.mp3"
-            mp3_path = get_unique_filepath(os.path.join(app.config['UPLOAD_FOLDER'], sanitized_name))
+            
+            original_path = get_unique_filepath(os.path.join(app.config['UPLOAD_FOLDER'], sanitized_name))
+            f.save(original_path)
+
+            if not os.path.exists(original_path) or os.path.getsize(original_path) == 0:
+                flash("Failed to save file")
+                return render_with_history()
+
+            file_ext = ext.lower().lstrip('.')
+            needs_conversion = file_ext != 'mp3'
+            
+            if needs_conversion:
+                try:
+                    base_name = os.path.splitext(sanitized_name)[0]
+                    mp3_path = get_unique_filepath(os.path.join(app.config['UPLOAD_FOLDER'], f"{base_name}.mp3"))
+                    convert_to_mp3(original_path, mp3_path)
+                    try:
+                        os.remove(original_path)
+                    except OSError:
+                        pass
+                except Exception as e:
+                    flash(f"Failed to convert to MP3: {str(e)}")
+                    try:
+                        os.remove(original_path)
+                    except OSError:
+                        pass
+                    return render_with_history()
+            else:
+                mp3_path = original_path
+
             base = os.path.splitext(os.path.basename(mp3_path))[0]
             midi_base_value = sanitize_filename(secure_filename(f"{base}_transkun")) or 'conversion'
             midi_name = f"{midi_base_value}.mid"
             midi_path = get_unique_filepath(os.path.join(app.config['CONVERTED_FOLDER'], midi_name))
-            f.save(mp3_path)
-
-            if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
-                flash("Failed to save MP3 file")
-                return render_with_history()
 
             device = request.form.get("device", None)
-            if device not in ["cuda", "cpu"]:
+            if device not in ["gpu", "mps", "cuda", "cpu"]:
                 device = None
             
             start = time.time()
             try:
                 convert_to_midi(mp3_path, midi_path, device)
                 conversion_time = round(time.time() - start, 2)
-                flash(f"MIDI created using Transkun: {midi_name}")
 
                 append_history({
                     "timestamp": time.time(),
@@ -688,6 +873,11 @@ def upload_file():
 
             except Exception as e:
                 flash(f"Conversion failed: {str(e)}")
+                if needs_conversion and os.path.exists(mp3_path):
+                    try:
+                        os.remove(mp3_path)
+                    except OSError:
+                        pass
 
         elif "media_url" in request.form:
             url = request.form["media_url"].strip()
@@ -737,14 +927,13 @@ def upload_file():
                 midi_path = get_unique_filepath(os.path.join(app.config["CONVERTED_FOLDER"], midi_name))
 
                 device = request.form.get("device", None)
-                if device not in ["cuda", "cpu"]:
+                if device not in ["gpu", "mps", "cuda", "cpu"]:
                     device = None
                 
                 start = time.time()
                 try:
                     convert_to_midi(mp3_path, midi_path, device)
                     conversion_time = round(time.time() - start, 2)
-                    flash(f"MIDI created using Transkun: {midi_name}")
 
                     append_history({
                         "timestamp": time.time(),
@@ -865,6 +1054,72 @@ def serve_wallpaper(filename):
         logger.error(f"Error serving wallpaper {filename}: {e}")
         abort(404)
 
+SOUNDFONTS_FOLDER = os.path.join(app.root_path, 'soundfonts')
+os.makedirs(SOUNDFONTS_FOLDER, exist_ok=True)
+
+@csrf.exempt
+@app.route("/api/soundfonts", methods=["GET"])
+def api_list_soundfonts():
+    """Return a list of .sf2 SoundFont files available in the soundfonts directory."""
+    try:
+        if not os.path.exists(SOUNDFONTS_FOLDER):
+            return jsonify({"soundfonts": []})
+        soundfonts = []
+        for filename in sorted(os.listdir(SOUNDFONTS_FOLDER)):
+            if filename.lower().endswith('.sf2') and os.path.isfile(os.path.join(SOUNDFONTS_FOLDER, filename)):
+                file_size = os.path.getsize(os.path.join(SOUNDFONTS_FOLDER, filename))
+                soundfonts.append({
+                    "filename": filename,
+                    "url": f"/soundfonts/{filename}",
+                    "size": file_size,
+                })
+        return jsonify({"soundfonts": soundfonts})
+    except Exception as e:
+        logger.error(f"Error listing soundfonts: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/soundfonts/<path:filename>")
+def serve_soundfont(filename):
+    """Serve a SoundFont (.sf2) file from the soundfonts directory."""
+    try:
+        safe_name = _resolve_safe_path(SOUNDFONTS_FOLDER, filename, {'.sf2'})
+        return send_from_directory(
+            SOUNDFONTS_FOLDER,
+            safe_name,
+            as_attachment=False,
+        )
+    except ValueError:
+        abort(400)
+    except FileNotFoundError:
+        abort(404)
+    except Exception as e:
+        logger.error(f"Error serving soundfont {filename}: {e}")
+        abort(404)
+
+@csrf.exempt
+@app.route("/api/midi/<path:filename>")
+def api_serve_midi(filename):
+    """Serve a MIDI file inline (not as download) for browser-side parsing."""
+    try:
+        safe_name = _resolve_safe_path(
+            app.config['CONVERTED_FOLDER'],
+            filename,
+            {'.mid', '.midi'},
+        )
+        return send_from_directory(
+            app.config['CONVERTED_FOLDER'],
+            safe_name,
+            as_attachment=False,
+            mimetype='audio/midi',
+        )
+    except ValueError:
+        abort(400)
+    except FileNotFoundError:
+        abort(404)
+    except Exception as e:
+        logger.error(f"Error serving MIDI file {filename}: {e}")
+        abort(404)
+
 
 @app.after_request
 def add_csp(response):
@@ -877,12 +1132,12 @@ def add_csp(response):
     csp = [
         "default-src 'self'",
         "img-src 'self' data: blob: https://img.youtube.com https://*.ytimg.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com",
-        f"script-src 'self' https://cdn.tailwindcss.com 'nonce-{nonce}'",
+        f"script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net 'unsafe-eval' 'wasm-unsafe-eval' 'nonce-{nonce}'",
         "style-src 'self' 'unsafe-inline'",
         "font-src 'self' data:",
         "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.tiktok.com",
         "connect-src 'self'",
-        "media-src 'self'",
+        "media-src 'self' blob:",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'"
@@ -910,11 +1165,9 @@ task_results = {}
 active_threads = {}
 
 def _is_cancelled(task_id: str) -> bool:
-    """Check if a task has been cancelled"""
     return conversion_tasks.get(task_id, {}).get("status") == "cancelled"
 
 def _cleanup_files(*filepaths: str):
-    """Safely remove files if they exist"""
     for filepath in filepaths:
         if filepath and os.path.exists(filepath):
             try:
@@ -934,6 +1187,7 @@ def run_conversion_task(task_id: str, url: str, device: str = None):
             if source is None:
                 conversion_tasks[task_id] = {"status": "error", "error": "Invalid URL format"}
                 return
+            cmd_log(logger, "i", "Queued %s conversion (%s)", source, task_id[:8])
 
             video_id = None
             video_title = None
@@ -980,6 +1234,7 @@ def run_conversion_task(task_id: str, url: str, device: str = None):
             if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
                 conversion_tasks[task_id] = {"status": "error", "error": "MP3 file was not downloaded successfully"}
                 return
+            cmd_log(logger, "+", "Audio downloaded: %s", os.path.basename(mp3_path))
 
             conversion_tasks[task_id] = {"status": "processing", "progress": "Converting to MIDI..."}
             
@@ -1038,6 +1293,7 @@ def run_conversion_task(task_id: str, url: str, device: str = None):
                 "timestamp": time.time(),
             }
             conversion_tasks[task_id] = {"status": "completed"}
+            cmd_log(logger, "+", "MIDI ready: %s (%ss)", midi_filename, conversion_time)
             
             _cleanup_files(mp3_path)
             logger.debug(f"Deleted downloaded MP3 file: {mp3_path}")
@@ -1053,13 +1309,11 @@ def run_conversion_task(task_id: str, url: str, device: str = None):
 @csrf.exempt
 @app.route("/api/health", methods=["GET"])
 def api_health():
-    """Health check endpoint for extension"""
     return jsonify({"status": "ok", "message": "Server is running"})
 
 @csrf.exempt
 @app.route("/api/convert", methods=["POST"])
 def api_convert():
-    """API endpoint for video conversion"""
     try:
         data = request.get_json()
         if not data:
@@ -1075,7 +1329,7 @@ def api_convert():
             return jsonify({"error": "Invalid URL format. Please enter a valid YouTube, TikTok, or Discord URL"}), 400
 
         device = data.get("device", None)
-        if device not in ["cuda", "cpu"]:
+        if device not in ["gpu", "mps", "cuda", "cpu"]:
             device = None
         
         task_id = str(uuid.uuid4())
@@ -1203,7 +1457,6 @@ def api_delete_history():
 @csrf.exempt
 @app.route("/api/settings", methods=["GET"])
 def api_get_settings():
-    """API endpoint to get settings from settings.json"""
     try:
         if os.path.exists(SETTINGS_FILE):
             with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
@@ -1218,7 +1471,6 @@ def api_get_settings():
 @csrf.exempt
 @app.route("/api/settings", methods=["POST"])
 def api_save_settings():
-    """API endpoint to save settings to settings.json"""
     try:
         data = request.get_json()
         if not data:
@@ -1329,10 +1581,252 @@ def api_upload_midi():
         logger.error(f"Upload MIDI error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+
+def run_file_conversion_task(task_id: str, file_path: str, device: str = None):
+    with app.app_context():
+        try:
+            conversion_tasks[task_id] = {"status": "processing", "progress": "Processing file..."}
+            cmd_log(logger, "i", "Queued upload conversion (%s): %s", task_id[:8], os.path.basename(file_path))
+            
+            if _is_cancelled(task_id):
+                _cleanup_files(file_path)
+                return
+            
+            _, ext = os.path.splitext(file_path)
+            file_ext = ext.lower().lstrip('.')
+            
+            needs_conversion = file_ext != 'mp3'
+            mp3_path = file_path
+            
+            if needs_conversion:
+                conversion_tasks[task_id] = {"status": "processing", "progress": "Converting to MP3..."}
+                
+                if _is_cancelled(task_id):
+                    _cleanup_files(file_path)
+                    return
+                
+                try:
+                    base_name = os.path.splitext(os.path.basename(file_path))[0]
+                    mp3_path = get_unique_filepath(os.path.join(app.config['UPLOAD_FOLDER'], f"{base_name}.mp3"))
+                    convert_to_mp3(file_path, mp3_path)
+                    cmd_log(logger, "+", "Audio normalized to MP3: %s", os.path.basename(mp3_path))
+                    try:
+                        os.remove(file_path)
+                    except OSError:
+                        pass
+                except Exception as e:
+                    try:
+                        os.remove(file_path)
+                    except OSError:
+                        pass
+                    if not _is_cancelled(task_id):
+                        conversion_tasks[task_id] = {"status": "error", "error": f"Failed to convert to MP3: {str(e)}"}
+                    return
+            
+            if _is_cancelled(task_id):
+                _cleanup_files(mp3_path)
+                return
+            
+            conversion_tasks[task_id] = {"status": "processing", "progress": "Converting to MIDI..."}
+            
+            if _is_cancelled(task_id):
+                _cleanup_files(mp3_path)
+                return
+            
+            base = os.path.splitext(os.path.basename(mp3_path))[0]
+            midi_name = f"{base}_transkun.mid"
+            midi_path = get_unique_filepath(os.path.join(app.config['CONVERTED_FOLDER'], midi_name))
+            
+            start = time.time()
+            
+            if _is_cancelled(task_id):
+                _cleanup_files(mp3_path)
+                return
+            
+            output_library = convert_to_midi(mp3_path, midi_path, device)
+            
+            if _is_cancelled(task_id):
+                _cleanup_files(mp3_path, midi_path)
+                return
+            
+            conversion_time = round(time.time() - start, 2)
+            
+            append_history({
+                "timestamp": time.time(),
+                "type": "upload",
+                "mp3_name": os.path.basename(mp3_path),
+                "youtube_url": None,
+                "tiktok_url": None,
+                "video_id": None,
+                "video_title": None,
+                "midi_name": midi_name,
+                "library": output_library,
+                "conversion_time": conversion_time,
+            })
+            
+            midi_filename = os.path.basename(midi_path)
+            download_url_path = f"/converted/{midi_filename}"
+            
+            task_results[task_id] = {
+                "status": "completed",
+                "midi_name": midi_filename,
+                "download_url": download_url_path,
+                "conversion_time": conversion_time,
+                "video_id": None,
+                "video_title": None,
+                "thumbnail_url": None,
+                "type": "upload",
+                "youtube_url": None,
+                "tiktok_url": None,
+                "discord_url": None,
+                "library": output_library,
+                "timestamp": time.time(),
+            }
+            conversion_tasks[task_id] = {"status": "completed"}
+            cmd_log(logger, "+", "MIDI ready: %s (%ss)", midi_filename, conversion_time)
+            
+            _cleanup_files(mp3_path)
+            logger.debug(f"Deleted processed MP3 file: {mp3_path}")
+            
+        except Exception as e:
+            logger.error(f"File conversion task error: {str(e)}")
+            if not _is_cancelled(task_id):
+                conversion_tasks[task_id] = {"status": "error", "error": str(e)}
+            if 'mp3_path' in locals():
+                _cleanup_files(mp3_path)
+                logger.debug(f"Deleted processed MP3 file after error: {mp3_path}")
+
+@csrf.exempt
+@app.route("/api/upload-media", methods=["POST"])
+def api_upload_media():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+        
+        file = request.files['file']
+        if not file or file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({"error": f"Unsupported file format. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"}), 400
+        
+        raw_name = secure_filename(file.filename)
+        sanitized_name = sanitize_filename(raw_name)
+        
+        original_path = get_unique_filepath(os.path.join(app.config['UPLOAD_FOLDER'], sanitized_name))
+        file.save(original_path)
+        
+        if not os.path.exists(original_path) or os.path.getsize(original_path) == 0:
+            return jsonify({"error": "Failed to save file"}), 500
+        
+        device = request.form.get("device") if request.form else None
+        if device not in ["gpu", "mps", "cuda", "cpu"]:
+            device = None
+        
+        task_id = str(uuid.uuid4())
+        conversion_tasks[task_id] = {"status": "queued", "progress": "Queued for processing"}
+        
+        thread = Thread(target=run_file_conversion_task, args=(task_id, original_path, device))
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({"task_id": task_id, "status": "queued"}), 202
+        
+    except Exception as e:
+        logger.error(f"Upload media error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@csrf.exempt
+@app.route("/api/midi-files", methods=["GET"])
+def api_midi_files():
+    """Return unique MIDI files from the converted folder, deduplicated by content hash."""
+    try:
+        converted_dir = app.config['CONVERTED_FOLDER']
+        if not os.path.exists(converted_dir):
+            return jsonify({"midi_files": []})
+
+        midi_extensions = ('.mid', '.midi')
+        midi_candidates = []
+
+        for filename in os.listdir(converted_dir):
+            if filename.lower().endswith(midi_extensions):
+                filepath = os.path.join(converted_dir, filename)
+                if os.path.isfile(filepath):
+                    midi_candidates.append((filename, filepath))
+
+        # Deduplicate by file content hash – keep the newest file per hash
+        seen_hashes = {}
+        for filename, filepath in midi_candidates:
+            try:
+                with open(filepath, 'rb') as f:
+                    content_hash = hashlib.sha256(f.read()).hexdigest()
+                mtime = os.path.getmtime(filepath)
+                if content_hash not in seen_hashes or mtime > seen_hashes[content_hash][2]:
+                    seen_hashes[content_hash] = (filename, filepath, mtime)
+            except Exception:
+                continue
+
+        # Build history lookup: midi_name -> history entry (for thumbnails)
+        history_data = load_history()
+        history_lookup = {}
+        for item in history_data:
+            midi_name = item.get('midi_name', '')
+            if midi_name and midi_name not in history_lookup:
+                history_lookup[midi_name] = item
+
+        result = []
+        for content_hash, (filename, filepath, mtime) in seen_hashes.items():
+            file_size = os.path.getsize(filepath)
+            time_str = human_dt(mtime)
+
+            # Try to find thumbnail from history
+            hist_entry = history_lookup.get(filename, {})
+            thumbnail_url = hist_entry.get('thumbnail_url', '')
+            video_title = hist_entry.get('video_title', '')
+            video_id = hist_entry.get('video_id', '')
+            source_type = hist_entry.get('type', '')
+            source_url = ''
+            if source_type == 'youtube':
+                source_url = hist_entry.get('youtube_url', '')
+            elif source_type == 'tiktok':
+                source_url = hist_entry.get('tiktok_url', '')
+            elif source_type == 'discord':
+                source_url = hist_entry.get('discord_url', '')
+
+            # For YouTube, build thumbnail from video_id if not present
+            if not thumbnail_url and video_id:
+                thumbnail_url = f"https://img.youtube.com/vi/{video_id}/mqdefault.jpg"
+
+            try:
+                download_url = url_for('download_file', filename=filename)
+            except Exception:
+                download_url = f"/converted/{filename}"
+
+            result.append({
+                "filename": filename,
+                "download_url": download_url,
+                "file_size": file_size,
+                "modified_time": mtime,
+                "time_str": time_str,
+                "thumbnail_url": thumbnail_url or '',
+                "video_title": video_title or '',
+                "video_id": video_id or '',
+                "source_type": source_type or '',
+                "source_url": source_url or '',
+                "content_hash": content_hash[:16],
+            })
+
+        # Sort by modification time, newest first
+        result.sort(key=lambda x: x['modified_time'], reverse=True)
+
+        return jsonify({"midi_files": result})
+    except Exception as e:
+        logger.error(f"Error listing MIDI files: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @csrf.exempt
 @app.route("/api/wallpapers", methods=["GET"])
 def api_list_wallpapers():
-    """API endpoint to list available wallpapers"""
     try:
         wallpapers_folder = os.path.join(app.root_path, 'wallpapers')
         if not os.path.exists(wallpapers_folder):
@@ -1351,7 +1845,6 @@ def api_list_wallpapers():
                     "type": "video" if is_video else "image"
                 })
         
-        # Sort alphabetically
         wallpapers.sort(key=lambda x: x["filename"])
         
         return jsonify({"wallpapers": wallpapers})
@@ -1373,10 +1866,32 @@ def serve_history_json():
     response.headers['Cache-Control'] = 'no-store, max-age=0'
     return response
 
+def silence_flask_startup_banner():
+    try:
+        import flask.cli
+        flask.cli.show_server_banner = lambda *args, **kwargs: None
+    except Exception:
+        pass
+
+def show_startup_console(mode: str = "Browser", host: str = "127.0.0.1", port: int = 5000):
+    silence_flask_startup_banner()
+    set_console_title("MP3 -> MIDI Converter")
+    print_banner("MP3 -> MIDI Converter")
+    cmd_log(logger, "i", "Mode: %s", mode)
+    cmd_log(logger, "i", "Local URL: http://%s:%s/", host, port)
+    cmd_log(logger, "i", "Auto device: %s", resolve_transkun_device(None))
+    cmd_log(logger, "i", "Stop server: Ctrl+C")
+    for warning in STARTUP_WARNINGS:
+        logger.warning(warning)
+
 if __name__ == "__main__":
+    HOST = '127.0.0.1'
+    PORT = 5000
+    show_startup_console("Browser", HOST, PORT)
+
     def open_browser():
         time.sleep(1.5)
-        webbrowser.open('http://127.0.0.1:5000/')
+        webbrowser.open(f'http://{HOST}:{PORT}/')
     
     Timer(1.5, open_browser).start()
-    app.run(host='127.0.0.1', port=5000)
+    app.run(host=HOST, port=PORT, debug=False, use_reloader=False)

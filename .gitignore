@@ -1,5 +1,9 @@
 .pt
 .pickle
+.DS_Store
+Thumbs.db
+.claude/
+*.code-workspace
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -66,12 +70,26 @@ db.sqlite3-journal
 # User data
 uploads/
 converted/
+vp_uploads/
 history.json
 app.log
+*.log
+*.out.log
+*.err.log
+cookies.txt
+settings.local.json
+wallpapers/
+soundfonts/*.sf2
 
 # Flask stuff:
 instance/
 .webassets-cache
+
+# Node / frontend tooling
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Scrapy stuff:
 .scrapy

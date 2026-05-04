@@ -6,24 +6,25 @@
     <title>MP3 → MIDI Converter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/piano-visualizer.css">
   </head>
   <body class="text-gray-200 min-h-screen flex items-center justify-center">
     <video id="background-video" autoplay loop muted playsinline preload="none" style="display: none;"></video>
     <div class="w-full max-w-6xl mx-auto px-4 py-8">
       {% if system_info %}
       <div id="system-info-box" class="bg-gray-800/80 backdrop-blur-md p-6 rounded-2xl shadow-lg border border-gray-700 hover-effect mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div class="flex items-center gap-2">
-            <span class="text-gray-400 text-sm font-semibold min-w-[60px]">Host:</span>
-            <span class="text-gray-200 text-sm flex-1 break-words">{{ system_info.host_name }}</span>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 system-info-grid">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-gray-400 text-sm font-semibold shrink-0">Host:</span>
+            <span class="text-gray-200 text-sm min-w-0 truncate" title="{{ system_info.host_name }}">{{ system_info.host_name }}</span>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-gray-400 text-sm font-semibold min-w-[60px]">CPU:</span>
-            <span class="text-gray-200 text-sm flex-1 break-words">{{ system_info.cpu }}</span>
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-gray-400 text-sm font-semibold shrink-0">CPU:</span>
+            <span class="text-gray-200 text-sm min-w-0 truncate" title="{{ system_info.cpu }}">{{ system_info.cpu }}</span>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-gray-400 text-sm font-semibold min-w-[60px]">GPU:</span>
-            <span class="text-gray-200 text-sm flex-1 break-words">{{ system_info.gpu }}</span>
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-gray-400 text-sm font-semibold shrink-0">GPU:</span>
+            <span class="text-gray-200 text-sm min-w-0 truncate" title="{{ system_info.gpu }}">{{ system_info.gpu }}</span>
           </div>
         </div>
       </div>
@@ -35,9 +36,9 @@
       </div>
       
       <div id="converter-tab" class="tab-content active">
-      <div class="flex flex-col lg:flex-row lg:items-start gap-6">
+      <div class="flex flex-col lg:flex-row lg:items-start gap-6" style="align-items: flex-start;">
 
-        <div id="drop-zone" class="main-card bg-gray-800/80 backdrop-blur-md p-8 rounded-2xl shadow-lg text-center w-full h-full border border-gray-700 hover-effect">
+        <div id="drop-zone" class="main-card bg-gray-800/80 backdrop-blur-md p-8 rounded-2xl shadow-lg text-center w-full border border-gray-700 hover-effect" style="position: relative; align-self: flex-start;">
           <h2 class="text-xl font-semibold text-white">MP3 → MIDI CONVERTER</h2>
 
           <div class="flex items-center justify-center space-x-4 mb-4">
@@ -48,7 +49,7 @@
                 <input type="checkbox" id="device-toggle" class="sr-only peer" checked>
                 <div id="device-toggle-switch" class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
               </label>
-              <span class="text-gray-400 text-xs">CUDA</span>
+              <span class="text-gray-400 text-xs">GPU</span>
             </div>
             <button type="button" id="sheets-settings-btn" class="inline-flex items-center justify-center text-center text-sm font-medium px-4 py-2 rounded-lg border border-purple-700 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 hover-effect">
               Settings
@@ -57,21 +58,21 @@
 
           <form method="post" enctype="multipart/form-data" class="space-y-4" id="file-upload-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="file" name="file" accept=".mp3"
+            <input type="file" name="file" accept=".mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.wma,.mp4,.webm,.avi,.mov,.mkv,.flv,.wmv,.m4v"
               class="block w-full text-sm text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:text-white"/>
-            <input type="hidden" name="device" id="device-input" value="cuda" />
-                <button type="submit" id="convert-button" class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-4 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">Convert MP3</button>
+            <input type="hidden" name="device" id="device-input" value="gpu" />
+                <button type="submit" id="convert-button" class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-4 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">Convert To MIDI</button>
           </form>
 
           <form method="post" class="space-y-4 mt-4" id="url-upload-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="text" name="media_url" placeholder="Paste YouTube/TikTok/Discord link"
                    class="block w-full p-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 placeholder-gray-400 hover-effect"/>
-            <input type="hidden" name="device" id="device-input-youtube" value="cuda" />
+            <input type="hidden" name="device" id="device-input-youtube" value="gpu" />
                 <button type="submit" id="convert-button-youtube" class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-4 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">Convert Link</button>
           </form>
 
-          <div id="videoPreview" class="mt-4" style="display: none !important;">
+          <div id="videoPreview" class="mt-4" style="display: none !important; max-height: 400px; overflow-y: auto;">
             <h2 class="text-lg mb-2">Done:</h2>
             <div id="videoPreviewContent"></div>
           </div>
@@ -93,6 +94,7 @@
           <div class="conversion-time hover-effect">
             Done in: {{ conversion_time }} s.
             <a href="{{ url_for('download_file', filename=midi_name) }}" class="download-midi-btn underline hover-effect">Download MIDI</a>
+            <button class="piano-visualizer-btn inline-flex items-center justify-center text-sm font-medium px-3 py-1 rounded-lg border hover-effect ml-2" data-midi-filename="{{ midi_name }}" style="vertical-align: middle;">Visualize</button>
           </div>
           {% endif %}
 
@@ -216,11 +218,14 @@
                           <span>Time: {{ item.conversion_time or '—' }}s</span>
                         </div>
                       {% if item.midi_name %}
-                        <a class="download-midi-btn inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect"
-                           href="{{ url_for('download_file', filename=item.midi_name) }}" download>
-                          Download MIDI
-                        </a>
-                        <div class="mt-1 flex gap-2">
+                        <div class="history-primary-actions">
+                          <a class="download-midi-btn history-card-action inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect"
+                             href="{{ url_for('download_file', filename=item.midi_name) }}" download>
+                            Download MIDI
+                          </a>
+                          <button data-midi-filename="{{ item.midi_name }}" class="piano-visualizer-btn history-card-action inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border hover-effect">Visualize</button>
+                        </div>
+                        <div class="history-secondary-actions mt-1">
                           <button data-midi-filename="{{ item.midi_name }}" class="view-tempo-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">
                             Convert to QWERTY
                           </button>
@@ -396,7 +401,7 @@
                 <option value="gradient">Gradient</option>
               </select>
               <div id="wallpaper-preview-container" class="mt-3 hidden">
-                <div class="text-sm text-gray-400 mb-2">Done:</div>
+                <div class="text-sm text-gray-400 mb-2">Preview:</div>
                 <div class="relative w-full h-32 rounded-lg border border-gray-600 bg-gray-700 overflow-hidden">
                   <div id="wallpaper-preview" class="w-full h-full bg-cover bg-center" style="background-image: none;"></div>
                   <video id="wallpaper-preview-video" autoplay loop muted playsinline preload="none" class="w-full h-full object-cover" style="display: none;"></video>
@@ -409,424 +414,205 @@
               </div>
             </div>
             
-            <div class="space-y-2">
-              <div>
-                <label class="block mb-2 text-sm font-medium">Primary Buttons (Convert, View):</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background</label>
-                    <input type="color" id="setting-primary-button-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-primary-button-bg-opacity" min="0" max="1" step="0.1" value="0.2" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="primary-button-bg-opacity-value">20%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-primary-button-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Text</label>
-                    <input type="color" id="setting-primary-button-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Hover Background</label>
-                    <input type="color" id="setting-primary-button-hover-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-primary-button-hover-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="primary-button-hover-bg-opacity-value">30%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Hover Border</label>
-                    <input type="color" id="setting-primary-button-hover-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
+            <div class="space-y-1" id="color-sections">
+
+              <div class="color-section rounded-lg border border-gray-700 overflow-hidden">
+                <button type="button" class="color-section-toggle w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-700/50 transition-colors" data-section="primary-buttons">
+                  <span>Primary Buttons (Convert, View)</span>
+                  <svg class="color-section-arrow w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="color-section-content hidden px-3 pb-3">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">Background</label><input type="color" id="setting-primary-button-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-primary-button-bg-opacity" min="0" max="1" step="0.1" value="0.2" class="w-full mt-1"><span class="text-xs text-gray-400" id="primary-button-bg-opacity-value">20%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-primary-button-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text</label><input type="color" id="setting-primary-button-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover BG</label><input type="color" id="setting-primary-button-hover-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-primary-button-hover-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1"><span class="text-xs text-gray-400" id="primary-button-hover-bg-opacity-value">30%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover Border</label><input type="color" id="setting-primary-button-hover-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
                   </div>
                 </div>
               </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Secondary Buttons (Settings, Download Sheets):</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background</label>
-                    <input type="color" id="setting-secondary-button-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-secondary-button-bg-opacity" min="0" max="1" step="0.1" value="0.2" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="secondary-button-bg-opacity-value">20%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-secondary-button-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Text</label>
-                    <input type="color" id="setting-secondary-button-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Hover Background</label>
-                    <input type="color" id="setting-secondary-button-hover-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-secondary-button-hover-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="secondary-button-hover-bg-opacity-value">30%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Hover Border</label>
-                    <input type="color" id="setting-secondary-button-hover-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
+
+              <div class="color-section rounded-lg border border-gray-700 overflow-hidden">
+                <button type="button" class="color-section-toggle w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-700/50 transition-colors" data-section="secondary-buttons">
+                  <span>Secondary Buttons (Settings, Sheets)</span>
+                  <svg class="color-section-arrow w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="color-section-content hidden px-3 pb-3">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">Background</label><input type="color" id="setting-secondary-button-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-secondary-button-bg-opacity" min="0" max="1" step="0.1" value="0.2" class="w-full mt-1"><span class="text-xs text-gray-400" id="secondary-button-bg-opacity-value">20%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-secondary-button-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text</label><input type="color" id="setting-secondary-button-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover BG</label><input type="color" id="setting-secondary-button-hover-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-secondary-button-hover-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1"><span class="text-xs text-gray-400" id="secondary-button-hover-bg-opacity-value">30%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover Border</label><input type="color" id="setting-secondary-button-hover-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
                   </div>
                 </div>
               </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Success Buttons (Download MIDI):</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background</label>
-                    <input type="color" id="setting-success-button-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-success-button-bg-opacity" min="0" max="1" step="0.1" value="0.2" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="success-button-bg-opacity-value">20%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-success-button-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Text</label>
-                    <input type="color" id="setting-success-button-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Hover Background</label>
-                    <input type="color" id="setting-success-button-hover-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-success-button-hover-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="success-button-hover-bg-opacity-value">30%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Hover Border</label>
-                    <input type="color" id="setting-success-button-hover-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
+
+              <div class="color-section rounded-lg border border-gray-700 overflow-hidden">
+                <button type="button" class="color-section-toggle w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-700/50 transition-colors" data-section="success-buttons">
+                  <span>Success Buttons (Download MIDI)</span>
+                  <svg class="color-section-arrow w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="color-section-content hidden px-3 pb-3">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">Background</label><input type="color" id="setting-success-button-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-success-button-bg-opacity" min="0" max="1" step="0.1" value="0.2" class="w-full mt-1"><span class="text-xs text-gray-400" id="success-button-bg-opacity-value">20%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-success-button-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text</label><input type="color" id="setting-success-button-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover BG</label><input type="color" id="setting-success-button-hover-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-success-button-hover-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1"><span class="text-xs text-gray-400" id="success-button-hover-bg-opacity-value">30%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover Border</label><input type="color" id="setting-success-button-hover-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
                   </div>
                 </div>
               </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Text Colors:</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Primary Text</label>
-                    <input type="color" id="setting-text-color" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Secondary Text</label>
-                    <input type="color" id="setting-text-secondary" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Card Colors:</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background</label>
-                    <input type="color" id="setting-card-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-card-bg-opacity" min="0" max="1" step="0.1" value="0.8" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="card-bg-opacity-value">80%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-card-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Hover Border</label>
-                    <input type="color" id="setting-card-hover-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-card-hover-border-opacity" min="0" max="1" step="0.1" value="0.4" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="card-hover-border-opacity-value">40%</span>
+
+              <div class="color-section rounded-lg border border-gray-700 overflow-hidden">
+                <button type="button" class="color-section-toggle w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-700/50 transition-colors" data-section="text-link">
+                  <span>Text &amp; Links</span>
+                  <svg class="color-section-arrow w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="color-section-content hidden px-3 pb-3">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">Primary Text</label><input type="color" id="setting-text-color" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Secondary Text</label><input type="color" id="setting-text-secondary" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Link</label><input type="color" id="setting-link-color" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Link Hover</label><input type="color" id="setting-link-hover" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
                   </div>
                 </div>
               </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Link Colors:</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Link</label>
-                    <input type="color" id="setting-link-color" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
+
+              <div class="color-section rounded-lg border border-gray-700 overflow-hidden">
+                <button type="button" class="color-section-toggle w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-700/50 transition-colors" data-section="cards-inputs">
+                  <span>Cards, Inputs &amp; Tabs</span>
+                  <svg class="color-section-arrow w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="color-section-content hidden px-3 pb-3">
+                  <div class="text-xs text-gray-500 mb-2 mt-1">Cards</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">Background</label><input type="color" id="setting-card-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-card-bg-opacity" min="0" max="1" step="0.1" value="0.8" class="w-full mt-1"><span class="text-xs text-gray-400" id="card-bg-opacity-value">80%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-card-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover Border</label><input type="color" id="setting-card-hover-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-card-hover-border-opacity" min="0" max="1" step="0.1" value="0.4" class="w-full mt-1"><span class="text-xs text-gray-400" id="card-hover-border-opacity-value">40%</span></div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Link Hover</label>
-                    <input type="color" id="setting-link-hover" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
+                  <div class="text-xs text-gray-500 mb-2 mt-3">Inputs</div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">BG</label><input type="color" id="setting-input-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-input-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text</label><input type="color" id="setting-input-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
                   </div>
-                </div>
-              </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Settings Modal Colors:</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background</label>
-                    <input type="color" id="setting-modal-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-modal-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="modal-bg-opacity-value">100%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-modal-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Text</label>
-                    <input type="color" id="setting-modal-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Secondary Text</label>
-                    <input type="color" id="setting-modal-text-secondary" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Tertiary Text</label>
-                    <input type="color" id="setting-modal-text-tertiary" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Backdrop</label>
-                    <input type="color" id="setting-modal-backdrop" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-modal-backdrop-opacity" min="0" max="1" step="0.1" value="0.5" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="modal-backdrop-opacity-value">50%</span>
+                  <div class="text-xs text-gray-500 mb-2 mt-3">Tabs</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">Active</label><input type="color" id="setting-tab-active" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Inactive</label><input type="color" id="setting-tab-inactive" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
                   </div>
                 </div>
               </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Input Colors:</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background</label>
-                    <input type="color" id="setting-input-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
+
+              <div class="color-section rounded-lg border border-gray-700 overflow-hidden">
+                <button type="button" class="color-section-toggle w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-700/50 transition-colors" data-section="history-items">
+                  <span>History Items &amp; Checkboxes</span>
+                  <svg class="color-section-arrow w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="color-section-content hidden px-3 pb-3">
+                  <div class="text-xs text-gray-500 mb-2 mt-1">History Items</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">Background</label><input type="color" id="setting-history-item-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-history-item-bg-opacity" min="0" max="1" step="0.1" value="0.4" class="w-full mt-1"><span class="text-xs text-gray-400" id="history-item-bg-opacity-value">40%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-history-item-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover BG</label><input type="color" id="setting-history-item-hover-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-history-item-hover-bg-opacity" min="0" max="1" step="0.1" value="0.6" class="w-full mt-1"><span class="text-xs text-gray-400" id="history-item-hover-bg-opacity-value">60%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover Border</label><input type="color" id="setting-history-item-hover-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-history-item-hover-border-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1"><span class="text-xs text-gray-400" id="history-item-hover-border-opacity-value">30%</span></div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-input-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Text</label>
-                    <input type="color" id="setting-input-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Tab Colors:</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Active Tab</label>
-                    <input type="color" id="setting-tab-active" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Inactive Tab</label>
-                    <input type="color" id="setting-tab-inactive" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
+                  <div class="text-xs text-gray-500 mb-2 mt-3">Checkboxes (CPU/CUDA Toggle)</div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">BG</label><input type="color" id="setting-checkbox-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Checked</label><input type="color" id="setting-checkbox-checked" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-checkbox-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
                   </div>
                 </div>
               </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">History Item Colors:</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background</label>
-                    <input type="color" id="setting-history-item-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-history-item-bg-opacity" min="0" max="1" step="0.1" value="0.4" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="history-item-bg-opacity-value">40%</span>
+
+              <div class="color-section rounded-lg border border-gray-700 overflow-hidden">
+                <button type="button" class="color-section-toggle w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-700/50 transition-colors" data-section="delete-badges">
+                  <span>Delete Button &amp; Badges</span>
+                  <svg class="color-section-arrow w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="color-section-content hidden px-3 pb-3">
+                  <div class="text-xs text-gray-500 mb-2 mt-1">Delete Button</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">Background</label><input type="color" id="setting-delete-button-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-delete-button-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1"><span class="text-xs text-gray-400" id="delete-button-bg-opacity-value">30%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-delete-button-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text</label><input type="color" id="setting-delete-button-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover BG</label><input type="color" id="setting-delete-button-hover-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-delete-button-hover-bg-opacity" min="0" max="1" step="0.1" value="0.5" class="w-full mt-1"><span class="text-xs text-gray-400" id="delete-button-hover-bg-opacity-value">50%</span></div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-history-item-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Hover Background</label>
-                    <input type="color" id="setting-history-item-hover-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-history-item-hover-bg-opacity" min="0" max="1" step="0.1" value="0.6" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="history-item-hover-bg-opacity-value">60%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Hover Border</label>
-                    <input type="color" id="setting-history-item-hover-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-history-item-hover-border-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="history-item-hover-border-opacity-value">30%</span>
+                  <div class="text-xs text-gray-500 mb-2 mt-3">Badges (BG / Border / Text)</div>
+                  <div class="space-y-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">YouTube</label><div class="grid grid-cols-3 gap-2"><input type="color" id="setting-badge-youtube-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="BG"><input type="color" id="setting-badge-youtube-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="Border"><input type="color" id="setting-badge-youtube-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="Text"></div><input type="range" id="setting-badge-youtube-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1"><span class="text-xs text-gray-400" id="badge-youtube-bg-opacity-value">30%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">TikTok</label><div class="grid grid-cols-3 gap-2"><input type="color" id="setting-badge-tiktok-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="BG"><input type="color" id="setting-badge-tiktok-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="Border"><input type="color" id="setting-badge-tiktok-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="Text"></div><input type="range" id="setting-badge-tiktok-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1"><span class="text-xs text-gray-400" id="badge-tiktok-bg-opacity-value">30%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Discord</label><div class="grid grid-cols-3 gap-2"><input type="color" id="setting-badge-discord-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="BG"><input type="color" id="setting-badge-discord-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="Border"><input type="color" id="setting-badge-discord-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="Text"></div><input type="range" id="setting-badge-discord-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1"><span class="text-xs text-gray-400" id="badge-discord-bg-opacity-value">30%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">MP3</label><div class="grid grid-cols-3 gap-2"><input type="color" id="setting-badge-mp3-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="BG"><input type="color" id="setting-badge-mp3-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="Border"><input type="color" id="setting-badge-mp3-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="Text"></div><input type="range" id="setting-badge-mp3-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1"><span class="text-xs text-gray-400" id="badge-mp3-bg-opacity-value">30%</span></div>
                   </div>
                 </div>
               </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Checkbox Colors (CPU/CUDA Toggle):</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background (Unchecked)</label>
-                    <input type="color" id="setting-checkbox-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
+
+              <div class="color-section rounded-lg border border-gray-700 overflow-hidden">
+                <button type="button" class="color-section-toggle w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-700/50 transition-colors" data-section="modals">
+                  <span>Modals &amp; Backdrops</span>
+                  <svg class="color-section-arrow w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="color-section-content hidden px-3 pb-3">
+                  <div class="text-xs text-gray-500 mb-2 mt-1">Settings Modal</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">BG</label><input type="color" id="setting-modal-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-modal-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1"><span class="text-xs text-gray-400" id="modal-bg-opacity-value">100%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-modal-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text</label><input type="color" id="setting-modal-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text 2nd</label><input type="color" id="setting-modal-text-secondary" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text 3rd</label><input type="color" id="setting-modal-text-tertiary" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Backdrop</label><input type="color" id="setting-modal-backdrop" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-modal-backdrop-opacity" min="0" max="1" step="0.1" value="0.5" class="w-full mt-1"><span class="text-xs text-gray-400" id="modal-backdrop-opacity-value">50%</span></div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Checked State</label>
-                    <input type="color" id="setting-checkbox-checked" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
+                  <div class="text-xs text-gray-500 mb-2 mt-3">Tempo Modal (Sheet Viewer)</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">BG</label><input type="color" id="setting-tempo-modal-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-tempo-modal-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1"><span class="text-xs text-gray-400" id="tempo-modal-bg-opacity-value">100%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-tempo-modal-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text</label><input type="color" id="setting-tempo-modal-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Backdrop</label><input type="color" id="setting-tempo-modal-backdrop" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-tempo-modal-backdrop-opacity" min="0" max="1" step="0.1" value="0.5" class="w-full mt-1"><span class="text-xs text-gray-400" id="tempo-modal-backdrop-opacity-value">50%</span></div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-checkbox-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Delete Button:</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background</label>
-                    <input type="color" id="setting-delete-button-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-delete-button-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="delete-button-bg-opacity-value">30%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-delete-button-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Text</label>
-                    <input type="color" id="setting-delete-button-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Hover Background</label>
-                    <input type="color" id="setting-delete-button-hover-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-delete-button-hover-bg-opacity" min="0" max="1" step="0.1" value="0.5" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="delete-button-hover-bg-opacity-value">50%</span>
+                  <div class="text-xs text-gray-500 mb-2 mt-3">Custom Modal (Alerts)</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">BG</label><input type="color" id="setting-custom-modal-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-custom-modal-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1"><span class="text-xs text-gray-400" id="custom-modal-bg-opacity-value">100%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Border</label><input type="color" id="setting-custom-modal-border" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Backdrop</label><input type="color" id="setting-custom-modal-backdrop" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-custom-modal-backdrop-opacity" min="0" max="1" step="0.1" value="0.5" class="w-full mt-1"><span class="text-xs text-gray-400" id="custom-modal-backdrop-opacity-value">50%</span></div>
                   </div>
                 </div>
               </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Badge Colors (YouTube, TikTok, Discord, MP3):</label>
-                <div class="space-y-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">YouTube Badge:</label>
-                    <div class="grid grid-cols-3 gap-2">
-                      <input type="color" id="setting-badge-youtube-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Background">
-                      <input type="color" id="setting-badge-youtube-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Border">
-                      <input type="color" id="setting-badge-youtube-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Text">
-                    </div>
-                    <input type="range" id="setting-badge-youtube-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="badge-youtube-bg-opacity-value">30%</span>
+
+              <div class="color-section rounded-lg border border-gray-700 overflow-hidden">
+                <button type="button" class="color-section-toggle w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left hover:bg-gray-700/50 transition-colors" data-section="modal-buttons">
+                  <span>Modal Buttons</span>
+                  <svg class="color-section-arrow w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div class="color-section-content hidden px-3 pb-3">
+                  <div class="text-xs text-gray-500 mb-2 mt-1">Close Buttons (BG / Text / Hover)</div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <input type="color" id="setting-modal-close-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="BG">
+                    <input type="color" id="setting-modal-close-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="Text">
+                    <input type="color" id="setting-modal-close-hover-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer" title="Hover Text">
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">TikTok Badge:</label>
-                    <div class="grid grid-cols-3 gap-2">
-                      <input type="color" id="setting-badge-tiktok-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Background">
-                      <input type="color" id="setting-badge-tiktok-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Border">
-                      <input type="color" id="setting-badge-tiktok-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Text">
-                    </div>
-                    <input type="range" id="setting-badge-tiktok-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="badge-tiktok-bg-opacity-value">30%</span>
+                  <div class="text-xs text-gray-500 mb-2 mt-3">Primary Action (Save)</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">BG</label><input type="color" id="setting-modal-action-primary-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-modal-action-primary-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1"><span class="text-xs text-gray-400" id="modal-action-primary-bg-opacity-value">100%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text</label><input type="color" id="setting-modal-action-primary-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover BG</label><input type="color" id="setting-modal-action-primary-hover-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-modal-action-primary-hover-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1"><span class="text-xs text-gray-400" id="modal-action-primary-hover-bg-opacity-value">100%</span></div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Discord Badge:</label>
-                    <div class="grid grid-cols-3 gap-2">
-                      <input type="color" id="setting-badge-discord-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Background">
-                      <input type="color" id="setting-badge-discord-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Border">
-                      <input type="color" id="setting-badge-discord-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Text">
-                    </div>
-                    <input type="range" id="setting-badge-discord-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="badge-discord-bg-opacity-value">30%</span>
+                  <div class="text-xs text-gray-500 mb-2 mt-3">Secondary Action (Reset)</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">BG</label><input type="color" id="setting-modal-action-secondary-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-modal-action-secondary-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1"><span class="text-xs text-gray-400" id="modal-action-secondary-bg-opacity-value">100%</span></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Text</label><input type="color" id="setting-modal-action-secondary-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover BG</label><input type="color" id="setting-modal-action-secondary-hover-bg" class="w-full h-8 rounded border border-gray-600 cursor-pointer"><input type="range" id="setting-modal-action-secondary-hover-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1"><span class="text-xs text-gray-400" id="modal-action-secondary-hover-bg-opacity-value">100%</span></div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">MP3 Badge:</label>
-                    <div class="grid grid-cols-3 gap-2">
-                      <input type="color" id="setting-badge-mp3-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Background">
-                      <input type="color" id="setting-badge-mp3-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Border">
-                      <input type="color" id="setting-badge-mp3-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Text">
-                    </div>
-                    <input type="range" id="setting-badge-mp3-bg-opacity" min="0" max="1" step="0.1" value="0.3" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="badge-mp3-bg-opacity-value">30%</span>
+                  <div class="text-xs text-gray-500 mb-2 mt-3">Tempo Buttons (Copy, Fullscreen)</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs text-gray-400 mb-1">Text</label><input type="color" id="setting-tempo-modal-button-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
+                    <div><label class="block text-xs text-gray-400 mb-1">Hover</label><input type="color" id="setting-tempo-modal-button-hover-text" class="w-full h-8 rounded border border-gray-600 cursor-pointer"></div>
                   </div>
                 </div>
               </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Tempo Modal (Sheet Viewer):</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background</label>
-                    <input type="color" id="setting-tempo-modal-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-tempo-modal-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="tempo-modal-bg-opacity-value">100%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-tempo-modal-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Text</label>
-                    <input type="color" id="setting-tempo-modal-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Backdrop</label>
-                    <input type="color" id="setting-tempo-modal-backdrop" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-tempo-modal-backdrop-opacity" min="0" max="1" step="0.1" value="0.5" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="tempo-modal-backdrop-opacity-value">50%</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Custom Modal (Alerts):</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background</label>
-                    <input type="color" id="setting-custom-modal-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-custom-modal-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="custom-modal-bg-opacity-value">100%</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Border</label>
-                    <input type="color" id="setting-custom-modal-border" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Backdrop</label>
-                    <input type="color" id="setting-custom-modal-backdrop" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                    <input type="range" id="setting-custom-modal-backdrop-opacity" min="0" max="1" step="0.1" value="0.5" class="w-full mt-1">
-                    <span class="text-xs text-gray-400" id="custom-modal-backdrop-opacity-value">50%</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <label class="block mb-2 text-sm font-medium">Modal Buttons:</label>
-                <div class="space-y-2">
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Close Buttons:</label>
-                    <div class="grid grid-cols-3 gap-2">
-                      <input type="color" id="setting-modal-close-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Background">
-                      <input type="color" id="setting-modal-close-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Text">
-                      <input type="color" id="setting-modal-close-hover-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Hover Text">
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Action Buttons (Save, Reset, etc.):</label>
-                    <div class="grid grid-cols-2 gap-2">
-                      <div>
-                        <label class="block text-xs text-gray-400 mb-1">Primary (Save)</label>
-                        <input type="color" id="setting-modal-action-primary-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                        <input type="range" id="setting-modal-action-primary-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1">
-                        <span class="text-xs text-gray-400" id="modal-action-primary-bg-opacity-value">100%</span>
-                        <input type="color" id="setting-modal-action-primary-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer mt-1">
-                        <input type="color" id="setting-modal-action-primary-hover-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer mt-1">
-                        <input type="range" id="setting-modal-action-primary-hover-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1">
-                        <span class="text-xs text-gray-400" id="modal-action-primary-hover-bg-opacity-value">100%</span>
-                      </div>
-                      <div>
-                        <label class="block text-xs text-gray-400 mb-1">Secondary (Reset)</label>
-                        <input type="color" id="setting-modal-action-secondary-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer">
-                        <input type="range" id="setting-modal-action-secondary-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1">
-                        <span class="text-xs text-gray-400" id="modal-action-secondary-bg-opacity-value">100%</span>
-                        <input type="color" id="setting-modal-action-secondary-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer mt-1">
-                        <input type="color" id="setting-modal-action-secondary-hover-bg" class="w-full h-10 rounded border border-gray-600 cursor-pointer mt-1">
-                        <input type="range" id="setting-modal-action-secondary-hover-bg-opacity" min="0" max="1" step="0.1" value="1" class="w-full mt-1">
-                        <span class="text-xs text-gray-400" id="modal-action-secondary-hover-bg-opacity-value">100%</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Tempo Modal Buttons (Copy, Fullscreen, etc.):</label>
-                    <div class="grid grid-cols-2 gap-2">
-                      <input type="color" id="setting-tempo-modal-button-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Text">
-                      <input type="color" id="setting-tempo-modal-button-hover-text" class="w-full h-10 rounded border border-gray-600 cursor-pointer" title="Hover Text">
-                    </div>
-                  </div>
-                </div>
-              </div>
+
             </div>
           </div>
         </div>
@@ -863,6 +649,8 @@
       </div>
     </div>
 
+
+
     <div id="custom-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
       <div class="bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4 border border-gray-700 shadow-xl">
         <div class="flex items-center justify-between mb-4">
@@ -875,13 +663,65 @@
       </div>
     </div>
 
+    <!-- Piano Visualizer Modal -->
+    <div id="piano-visualizer-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+      <div id="piano-visualizer-content" class="bg-gray-800 rounded-lg p-0.5 max-w-6xl w-full mx-2 max-h-[92vh] overflow-hidden border border-gray-700 shadow-xl flex flex-col relative">
+        <!-- Header -->
+        <div class="pv-header">
+          <div id="pv-title" class="pv-header-title"></div>
+          <div class="pv-header-buttons">
+            <button id="pv-close" title="Close">✕</button>
+          </div>
+        </div>
+        <!-- Canvas stage -->
+        <div class="pv-stage">
+          <canvas id="pv-canvas"></canvas>
+          <div id="pv-loading" class="pv-loading-overlay">
+            <div class="pv-loading-spinner"></div>
+            <div id="pv-loading-text" class="pv-loading-text">Loading...</div>
+            <div class="pv-loading-progress"><div id="pv-loading-bar" class="pv-loading-progress-bar"></div></div>
+          </div>
+        </div>
+        <!-- Seek bar -->
+        <input type="range" id="pv-seek" class="pv-seek-bar" min="0" max="100" value="0" step="0.1">
+        <!-- Controls -->
+        <div class="pv-controls">
+          <div class="pv-transport">
+            <button id="pv-play" title="Play" aria-label="Play">&#9654;</button>
+            <button id="pv-stop" title="Stop">⏹</button>
+          </div>
+          <div id="pv-time-display" class="pv-time">0:00 / 0:00</div>
+          <div class="pv-volume-group">
+            <span id="pv-volume-icon" class="pv-volume-icon">🔊</span>
+            <input type="range" id="pv-volume" class="pv-volume-slider" min="0" max="1" step="0.01" value="0.8">
+          </div>
+          <div class="pv-spacer"></div>
+          <select id="pv-soundfont-select" class="pv-soundfont-select"><option value="">Loading...</option></select>
+        </div>
+      </div>
+    </div>
+
+    <div id="global-drop-overlay" class="global-drop-overlay" aria-hidden="true">
+      <div class="global-drop-overlay-inner">
+        <p class="global-drop-overlay-text">Drop files here</p>
+        <p class="global-drop-overlay-hint">Audio, video, or MIDI files</p>
+      </div>
+    </div>
+
     <script src="/static/js/modal.js"></script>
     <script src="/static/js/device.js"></script>
     <script src="/static/js/settings.js"></script>
     <script src="/static/js/sheets-utils.js"></script>
     <script src="/static/js/history.js"></script>
+
     <script src="/static/js/conversion.js"></script>
     <script src="/static/js/sheets-viewer.js"></script>
+    <script src="/static/js/midis.js"></script>
     <script src="/static/js/ui.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-synthesizer@1.8.5/externals/libfluidsynth-2.3.0.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-synthesizer@1.8.5/dist/js-synthesizer.js"></script>
+    <script src="/static/js/piano-visualizer.js"></script>
   </body>
 </html>

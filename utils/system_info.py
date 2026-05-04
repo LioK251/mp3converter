@@ -7,6 +7,17 @@ import torch
 
 logger = logging.getLogger(__name__)
 
+
+def sanitize_display_string(s):
+    """Normalize string for display: strip, replace newlines/tabs with space, collapse multiple spaces."""
+    if not s or not isinstance(s, str):
+        return s or ""
+    s = s.strip()
+    s = re.sub(r"[\r\n\t]+", " ", s)
+    s = re.sub(r" +", " ", s)
+    return s.strip() or "Unknown"
+
+
 def is_valid_cpu_name(cpu_string):
     if not cpu_string or cpu_string == "Unknown":
         return False
@@ -34,7 +45,7 @@ def get_system_info():
                     host_name = username
                 else:
                     host_name = hostname
-        except:
+        except Exception:
             host_name = platform.node()
         
         cpu_info = None
@@ -135,12 +146,41 @@ def get_system_info():
                             if "model name" in line.lower():
                                 cpu_info = line.split(":")[1].strip()
                                 break
-                except:
+                except Exception:
                     cpu_info = "Unknown"
             else:
                 try:
-                    cpu_info = subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"], text=True).strip()
-                except:
+                    result = subprocess.run(
+                        ["sysctl", "-n", "machdep.cpu.brand_string"],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL,
+                        text=True,
+                        timeout=5,
+                    )
+                    cpu_info = result.stdout.strip() if result.returncode == 0 else ""
+                    if not cpu_info:
+                        result = subprocess.run(
+                            ["system_profiler", "SPHardwareDataType"],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL,
+                            text=True,
+                            timeout=5,
+                        )
+                        if result.returncode == 0:
+                            chip = None
+                            cores = None
+                            for line in result.stdout.splitlines():
+                                if "Chip:" in line:
+                                    chip = line.split(":", 1)[1].strip()
+                                elif "Total Number of Cores:" in line:
+                                    cores = line.split(":", 1)[1].strip()
+                            if chip and cores:
+                                cpu_info = f"{chip} CPU, {cores}"
+                            elif chip:
+                                cpu_info = chip
+                    if not cpu_info:
+                        cpu_info = platform.processor() or "Unknown"
+                except Exception:
                     cpu_info = "Unknown"
         except Exception as e:
             logger.warning(f"Error getting CPU info: {e}")
@@ -169,6 +209,11 @@ def get_system_info():
             for blacklisted in gpu_blacklist:
                 if blacklisted.upper() in name_upper or name_upper in blacklisted.upper():
                     return False
+            if (
+                "APPLE" in name_upper
+                and any(token in name_upper for token in ["M1", "M2", "M3", "M4", "M5", "GPU", "METAL"])
+            ):
+                return True
             cpu_indicators = ['GHZ', 'MHZ', 'PROCESSOR', 'CORE', 'THREAD', '@', 'RYZEN', 'INTEL CORE', 'I3', 'I5', 'I7', 'I9', 'X3D']
             if any(indicator in name_upper for indicator in cpu_indicators):
                 return False
@@ -180,7 +225,7 @@ def get_system_info():
                 return False
             if name.count(' ') > 10:
                 return False
-            gpu_keywords = ['NVIDIA', 'GEFORCE', 'RTX', 'GTX', 'AMD', 'RADEON', 'INTEL', 'GRAPHICS', 'VIDEO', 'CONTROLLER', 'DISPLAY']
+            gpu_keywords = ['NVIDIA', 'GEFORCE', 'RTX', 'GTX', 'AMD', 'RADEON', 'INTEL', 'APPLE', 'M1', 'M2', 'M3', 'M4', 'M5', 'GRAPHICS', 'GPU', 'METAL', 'VIDEO', 'CONTROLLER', 'DISPLAY']
             if not any(keyword in name_upper for keyword in gpu_keywords):
                 return False
             return True
@@ -279,15 +324,37 @@ def get_system_info():
         def detect_gpu_system_profiler():
             try:
                 result = subprocess.run(["system_profiler", "SPDisplaysDataType"], 
-                                      capture_output=True, text=True, stderr=subprocess.DEVNULL, timeout=5)
+                                      stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=5)
                 if result.returncode == 0:
                     gpu_output = result.stdout
                     gpu_list = []
+                    current_gpu = None
+                    current_cores = None
+                    current_metal = None
                     for line in gpu_output.split("\n"):
                         if "Chipset Model" in line:
-                            gpu_name = line.split(":")[1].strip()
-                            if gpu_name:
-                                gpu_list.append(gpu_name)
+                            if current_gpu:
+                                parts = [current_gpu]
+                                if current_cores:
+                                    parts.append(f"{current_cores}-core")
+                                if current_metal:
+                                    parts.append("Metal")
+                                gpu_list.append(" ".join(parts))
+                            current_gpu = line.split(":", 1)[1].strip()
+                            current_cores = None
+                            current_metal = None
+                        elif "Total Number of Cores" in line and current_gpu:
+                            current_cores = line.split(":", 1)[1].strip()
+                        elif "Metal" in line and current_gpu:
+                            metal_value = line.split(":", 1)[1].strip()
+                            current_metal = metal_value.lower().startswith("supported")
+                    if current_gpu:
+                        parts = [current_gpu]
+                        if current_cores:
+                            parts.append(f"{current_cores}-core")
+                        if current_metal:
+                            parts.append("Metal")
+                        gpu_list.append(" ".join(parts))
                     return get_unique_gpus(gpu_list)
             except Exception as e:
                 logger.debug(f"system_profiler GPU detection failed: {e}")
@@ -314,7 +381,6 @@ def get_system_info():
         else:
             detection_methods = [
                 detect_gpu_cuda,
-                detect_gpu_nvidia_smi,
                 detect_gpu_system_profiler,
             ]
         
@@ -339,9 +405,9 @@ def get_system_info():
                 continue
         
         return {
-            "host_name": host_name,
-            "cpu": cpu_info,
-            "gpu": gpu_info,
+            "host_name": sanitize_display_string(host_name),
+            "cpu": sanitize_display_string(cpu_info),
+            "gpu": sanitize_display_string(gpu_info),
         }
     except Exception as e:
         logger.error(f"Error getting system info: {str(e)}")
@@ -350,4 +416,3 @@ def get_system_info():
             "cpu": "Unknown",
             "gpu": "Unknown",
         }
-

@@ -1,0 +1,337 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Piano Visualizer — Modal, Canvas, Controls, Transport, Volume
+   Uses project design tokens from style.css (:root CSS variables)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Modal backdrop ── */
+#piano-visualizer-modal {
+    transition: opacity 0.2s ease-out;
+}
+#piano-visualizer-modal.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+#piano-visualizer-modal:not(.hidden) {
+    opacity: 1;
+}
+
+/* ── Modal content panel ── */
+#piano-visualizer-content {
+    width: min(96vw, 1500px);
+    height: min(90vh, 900px);
+    max-width: min(96vw, 1500px) !important;
+    max-height: 94vh !important;
+    transition:
+        width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Header bar ── */
+.pv-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    min-height: 36px;
+    flex-shrink: 0;
+    z-index: 10;
+    position: relative;
+}
+.pv-header-title {
+    font-size: clamp(0.65rem, 1.2vw, 0.875rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    text-align: center;
+    color: var(--tempo-modal-text, #9ca3af);
+    font-weight: 600;
+}
+.pv-header-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pv-header-buttons button {
+    background: transparent !important;
+    border: none !important;
+    color: var(--tempo-modal-button-text, #9ca3af) !important;
+    cursor: pointer;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    transition: color 0.15s ease;
+}
+.pv-header-buttons button:hover {
+    color: var(--tempo-modal-button-hover-text, #ffffff) !important;
+}
+
+/* ── Canvas stage ── */
+.pv-stage {
+    position: relative;
+    flex: 1;
+    min-height: 300px;
+    overflow: hidden;
+    background: #0a0e17;
+    border-radius: 4px;
+    margin: 0 4px;
+}
+.pv-stage canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ── Loading overlay on top of canvas ── */
+.pv-loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 14, 23, 0.92);
+    z-index: 20;
+    transition: opacity 0.3s ease;
+}
+.pv-loading-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+.pv-loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(147, 51, 234, 0.25);
+    border-top-color: #9333ea;
+    border-radius: 50%;
+    animation: pv-spin 0.8s linear infinite;
+    margin-bottom: 12px;
+}
+@keyframes pv-spin {
+    to { transform: rotate(360deg); }
+}
+.pv-loading-text {
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+.pv-loading-progress {
+    width: 180px;
+    height: 4px;
+    background: #1f2937;
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+.pv-loading-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #9333ea, #6366f1);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
+/* ── Controls bar (below canvas) ── */
+.pv-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    min-height: 48px;
+}
+
+/* ── Transport buttons ── */
+.pv-transport {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.pv-transport button {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid var(--card-border, #374151);
+    background: rgba(55, 65, 81, 0.5);
+    color: #e5e7eb;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 14px;
+    padding: 0;
+}
+.pv-transport button:hover {
+    background: rgba(147, 51, 234, 0.3);
+    border-color: #9333ea;
+    transform: translateY(-1px);
+}
+.pv-transport button.active {
+    background: rgba(147, 51, 234, 0.4);
+    border-color: #a855f7;
+    color: #ffffff;
+}
+
+/* ── Time display ── */
+.pv-time {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    font-variant-numeric: tabular-nums;
+    min-width: 90px;
+    text-align: center;
+    user-select: none;
+}
+
+/* ── Volume slider ── */
+.pv-volume-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.pv-volume-icon {
+    font-size: 14px;
+    color: #9ca3af;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+}
+.pv-volume-icon:hover {
+    color: #e5e7eb;
+}
+.pv-volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(to right, #9333ea var(--volume-pct, 80%), #374151 var(--volume-pct, 80%));
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: height 0.15s ease;
+}
+.pv-volume-slider:hover {
+    height: 6px;
+}
+.pv-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #a855f7;
+    border: 2px solid #1f2937;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.pv-volume-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+}
+.pv-volume-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #a855f7;
+    border: 2px solid #1f2937;
+    cursor: pointer;
+}
+
+/* ── SoundFont selector ── */
+.pv-soundfont-select {
+    background: rgba(55, 65, 81, 0.6) !important;
+    border: 1px solid var(--card-border, #374151) !important;
+    color: #e5e7eb !important;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    max-width: 180px;
+    min-height: 28px !important;
+    transition: border-color 0.15s ease;
+}
+.pv-soundfont-select:hover {
+    border-color: #9333ea !important;
+    transform: none;
+    box-shadow: none;
+}
+.pv-soundfont-select:focus {
+    border-color: #a855f7 !important;
+    box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.2) !important;
+    transform: none;
+}
+
+/* ── Seek bar (progress under canvas) ── */
+.pv-seek-bar {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, #9333ea var(--seek-pct, 0%), #1f2937 var(--seek-pct, 0%));
+    border: none;
+    outline: none;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    display: block;
+    flex-shrink: 0;
+    transition: height 0.15s ease;
+}
+.pv-seek-bar:hover {
+    height: 8px;
+}
+.pv-seek-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 0;
+    height: 0;
+}
+.pv-seek-bar:hover::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #a855f7;
+    border: 2px solid #0a0e17;
+}
+.pv-seek-bar::-moz-range-thumb {
+    width: 0;
+    height: 0;
+    border: none;
+    background: transparent;
+}
+.pv-seek-bar:hover::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #a855f7;
+    border: 2px solid #0a0e17;
+}
+
+/* ── Spacer element ── */
+.pv-spacer {
+    flex: 1;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+    .pv-controls {
+        gap: 6px;
+        padding: 6px 8px;
+    }
+    .pv-volume-slider {
+        width: 60px;
+    }
+    .pv-soundfont-select {
+        max-width: 120px;
+    }
+    .pv-time {
+        min-width: 70px;
+        font-size: 0.65rem;
+    }
+}

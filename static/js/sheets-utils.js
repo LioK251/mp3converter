@@ -104,15 +104,31 @@ function isSeparatorAt(text, pos) {
   return null;
 }
 
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function processChordSegment(segment, color, isOutOfRangeSegment) {
+  if (!segment) return '';
+  
+  const escaped = escapeHtml(segment);
+  
+  if (isOutOfRangeSegment) {
+    return `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em; text-stroke: 0.5px ${color}; -webkit-text-stroke: 0.5px ${color};">${escaped}</span>`;
+  } else {
+    return `<span style="color:${color}">${escaped}</span>`;
+  }
+}
+
 function colorizeTempoText(text) {
   const lines = text.split('\n');
-  let result = '';
+  const result = [];
   let skipNextEmpty = false;
   
   for (const line of lines) {
     if (line.trim().startsWith('Transpose by:')) {
-      const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      result += escaped + '\n';
+      result.push(escapeHtml(line) + '\n');
       skipNextEmpty = true;
       continue;
     }
@@ -125,13 +141,12 @@ function colorizeTempoText(text) {
     skipNextEmpty = false;
     
     if (!line.trim()) {
-      result += '\n';
+      result.push('\n');
       continue;
     }
     
     if (line.trim().startsWith('<!--')) {
-      const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      result += escaped + '\n';
+      result.push(escapeHtml(line) + '\n');
       continue;
     }
     
@@ -154,97 +169,126 @@ function colorizeTempoText(text) {
       }
     }
     
-    const charColors = new Array(line.length);
-    for (let i = 0; i < line.length; i++) {
-      charColors[i] = tempoColors.long;
+    const segments = [];
+    let currentStart = 0;
+    let currentColor = tempoColors.long;
+    
+    for (const sep of separators) {
+      if (sep.start > currentStart) {
+        segments.push({
+          text: line.substring(currentStart, sep.start),
+          color: currentColor,
+          isOutOfRange: false
+        });
+      }
+      currentStart = sep.end;
+      currentColor = sep.color;
     }
     
-    let segmentStart = 0;
-    
-    for (let i = 0; i < separators.length; i++) {
-      const sep = separators[i];
-      
-      for (let j = segmentStart; j < sep.end && j < line.length; j++) {
-        charColors[j] = sep.color;
-      }
-      
-      segmentStart = sep.end;
-    }
-    
-    if (separators.length > 0) {
-      const lastColor = separators[separators.length - 1].color;
-      for (let i = segmentStart; i < line.length; i++) {
-        charColors[i] = lastColor;
-      }
-    }
-    
-    const isOutOfRange = new Array(line.length).fill(false);
-    for (let i = 0; i < line.length - 1; i++) {
-      if (line[i] === ':' && /[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|\\:";'<>?,./`~-]/.test(line[i + 1])) {
-        isOutOfRange[i] = true;
-        isOutOfRange[i + 1] = true;
-      }
-    }
-    
-    let chordStart = 0;
-    
-    for (let i = 0; i < separators.length; i++) {
-      const sep = separators[i];
-      const chordEnd = sep.end;
-      
-      result += '<span class="chord-block svelte-1l3km4k">';
-      
-      for (let j = chordStart; j < chordEnd && j < line.length; j++) {
-        const char = line[j];
-        const color = charColors[j] || tempoColors.long;
-        const escaped = char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        
-        if (isOutOfRange[j]) {
-          result += `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em; text-stroke: 0.5px ${color}; -webkit-text-stroke: 0.5px ${color};">${escaped}</span>`;
-        } else {
-          result += `<span style="color:${color}">${escaped}</span>`;
-        }
-      }
-      
-      result += '</span>';
-      
-      chordStart = chordEnd;
-    }
-    
-    if (chordStart < line.length) {
-      result += '<span class="chord-block svelte-1l3km4k">';
-      for (let i = chordStart; i < line.length; i++) {
-        const char = line[i];
-        const color = charColors[i] || tempoColors.long;
-        const escaped = char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        
-        if (isOutOfRange[i]) {
-          result += `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em;">${escaped}</span>`;
-        } else {
-          result += `<span style="color:${color}">${escaped}</span>`;
-        }
-      }
-      result += '</span>';
+    if (currentStart < line.length) {
+      segments.push({
+        text: line.substring(currentStart),
+        color: currentColor,
+        isOutOfRange: false
+      });
     }
     
     if (separators.length === 0) {
-      result += '<span class="chord-block svelte-1l3km4k">';
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        const color = charColors[i] || tempoColors.long;
-        const escaped = char.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        
-        if (isOutOfRange[i]) {
-          result += `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em;">${escaped}</span>`;
-        } else {
-          result += `<span style="color:${color}">${escaped}</span>`;
-        }
-      }
-      result += '</span>';
+      segments.push({
+        text: line,
+        color: tempoColors.long,
+        isOutOfRange: false
+      });
     }
     
-    result += '\n';
+    for (const segment of segments) {
+      const outOfRangeIndices = new Set();
+      for (let i = 0; i < segment.text.length - 1; i++) {
+        if (segment.text[i] === ':' && /[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|\\:";'<>?,./`~-]/.test(segment.text[i + 1])) {
+          outOfRangeIndices.add(i);
+          outOfRangeIndices.add(i + 1);
+        }
+      }
+      segment.outOfRangeIndices = outOfRangeIndices;
+    }
+    
+    const lineParts = [];
+    for (let i = 0; i < separators.length; i++) {
+      const sep = separators[i];
+      const chordStart = i === 0 ? 0 : separators[i - 1].end;
+      const chordText = line.substring(chordStart, sep.end);
+      const chordColor = sep.color;
+      
+      lineParts.push('<span class="chord-block svelte-1l3km4k">');
+      
+      let chunk = '';
+      for (let j = 0; j < chordText.length; j++) {
+        const char = chordText[j];
+        const isOutOfRange = (chordStart + j >= 0 && line[chordStart + j] === ':' && 
+                              j + 1 < chordText.length && 
+                              /[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|\\:";'<>?,./`~-]/.test(chordText[j + 1])) ||
+                             (j > 0 && line[chordStart + j - 1] === ':');
+        
+        if (isOutOfRange) {
+          chunk += `<span style="color:${chordColor}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em; text-stroke: 0.5px ${chordColor}; -webkit-text-stroke: 0.5px ${chordColor};">${escapeHtml(char)}</span>`;
+        } else {
+          chunk += `<span style="color:${chordColor}">${escapeHtml(char)}</span>`;
+        }
+      }
+      
+      lineParts.push(chunk);
+      lineParts.push('</span>');
+    }
+    
+    if (separators.length === 0) {
+      lineParts.push('<span class="chord-block svelte-1l3km4k">');
+      let chunk = '';
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        const color = tempoColors.long;
+        const isOutOfRange = i < line.length - 1 && line[i] === ':' && 
+                            /[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|\\:";'<>?,./`~-]/.test(line[i + 1]);
+        
+        if (isOutOfRange || (i > 0 && line[i - 1] === ':')) {
+          chunk += `<span style="color:${color}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em;">${escapeHtml(char)}</span>`;
+        } else {
+          chunk += `<span style="color:${color}">${escapeHtml(char)}</span>`;
+        }
+      }
+      lineParts.push(chunk);
+      lineParts.push('</span>');
+    } else if (separators.length > 0 && separators[separators.length - 1].end < line.length) {
+      const remainingStart = separators[separators.length - 1].end;
+      const remainingText = line.substring(remainingStart);
+      const remainingColor = separators[separators.length - 1].color;
+      
+      lineParts.push('<span class="chord-block svelte-1l3km4k">');
+      let chunk = '';
+      for (let i = 0; i < remainingText.length; i++) {
+        const char = remainingText[i];
+        const isOutOfRange = (remainingStart + i < line.length - 1 && line[remainingStart + i] === ':' && 
+                              /[a-zA-Z0-9!@#$%^&*()_+=\[\]{}|\\:";'<>?,./`~-]/.test(line[remainingStart + i + 1])) ||
+                             (i > 0 && remainingText[i - 1] === ':');
+        
+        if (isOutOfRange) {
+          chunk += `<span style="color:${remainingColor}; font-weight: 900; border-bottom: 2px solid; display: inline-flex; justify-content: center; min-width: 0.6em;">${escapeHtml(char)}</span>`;
+        } else {
+          chunk += `<span style="color:${remainingColor}">${escapeHtml(char)}</span>`;
+        }
+      }
+      lineParts.push(chunk);
+      lineParts.push('</span>');
+    }
+    
+    result.push(lineParts.join('') + '\n');
   }
   
-  return result;
+  return result.join('');
 }
+
+
+
+
+
+
+

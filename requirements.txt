@@ -1,14 +1,29 @@
-Flask
-flask-wtf
-Werkzeug
-yt-dlp
-torch
-pretty-midi
-requests
-flask-talisman
-pywebview
+# Web framework
+Flask>=2.3,<4
+Werkzeug>=2.3,<4
+Flask-WTF>=1.2,<2
+flask-talisman>=0.8.1,<2
 
-# Note: For RTX 50xx series GPUs, install PyTorch, torchvision, and torchaudio separately with CUDA 12.9 support:
-# pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
-# Then install other dependencies: pip install -r requirements.txt --no-deps torch torchaudio
-# All three packages (torch, torchvision, torchaudio) must be from the same source for compatibility
+# Downloads and HTTP
+yt-dlp[default]>=2024.8.6
+requests>=2.28,<3
+
+# Audio/MIDI conversion
+transkun>=2.0
+torch>=2.1
+pretty-midi>=0.2.10
+scipy>=1.10
+
+# Optional desktop window mode
+pywebview>=4.4
+pywin32>=306; platform_system == "Windows"
+
+# GPU note:
+# Install the PyTorch build that matches your hardware before this file if you
+# need CUDA/MPS acceleration. Keep torch/torchvision/torchaudio from one index.
+#
+# CUDA example:
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+#
+# RTX 50-series nightly CUDA example:
+#   pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129

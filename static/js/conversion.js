@@ -7,6 +7,16 @@ const progressText = document.getElementById('progressText');
 const progressBar = document.getElementById('progressBar');
 const progressFill = document.getElementById('progressFill');
 
+function showProgress() {
+  if (progressText) progressText.style.display = 'block';
+  if (progressBar) progressBar.style.display = 'block';
+}
+
+function hideProgress() {
+  if (progressText) progressText.style.display = 'none';
+  if (progressBar) progressBar.style.display = 'none';
+}
+
 function attachLoadingState(id) {
   var button = document.getElementById(id);
   if (!button) return;
@@ -38,8 +48,7 @@ function convertToStopButton(buttonId) {
         progressText.textContent = 'Cancelled';
         resetButtonStates();
         setTimeout(() => {
-          progressText.style.display = 'none';
-          progressBar.style.display = 'none';
+          hideProgress();
           currentTaskId = null;
           activeConvertButtonId = null;
           setTimeout(() => { isStopped = false; }, 1000);
@@ -50,8 +59,7 @@ function convertToStopButton(buttonId) {
       resetButtonStates();
       progressText.textContent = 'Cancelling...';
       setTimeout(() => {
-        progressText.style.display = 'none';
-        progressBar.style.display = 'none';
+        hideProgress();
         currentTaskId = null;
         activeConvertButtonId = null;
         setTimeout(() => { isStopped = false; }, 1000);
@@ -77,7 +85,7 @@ function revertStopButtons() {
     convertButton.classList.remove('stop-mode');
     convertButton.classList.remove('border-red-700', 'bg-red-600/20', 'text-red-300', 'hover:bg-red-600/30');
     convertButton.classList.add('border-blue-700', 'bg-blue-600/20', 'text-blue-300', 'hover:bg-blue-600/30');
-    convertButton.textContent = buttonStates['convert-button'] || 'Convert MP3';
+    convertButton.textContent = buttonStates['convert-button'] || 'Convert To MIDI';
     convertButton.onclick = null;
   }
   
@@ -377,10 +385,14 @@ function showConversionResult(resultData) {
     
     if (resultData.download_url && resultData.midi_name) {
       html += `<div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">`;
+      html += `<div class="history-primary-actions">`;
       html += `<a href="${resultData.download_url}" class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect" download>`;
       html += `Download MIDI`;
       html += `</a>`;
-      html += `<div style="display: flex; gap: 8px;">`;
+      html += `<button data-midi-filename="${resultData.midi_name}" class="piano-visualizer-btn inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border hover-effect">Visualize</button>`;
+
+      html += `</div>`;
+      html += `<div class="history-secondary-actions">`;
       html += `<button data-midi-filename="${resultData.midi_name}" class="view-tempo-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">`;
       html += `Convert to QWERTY`;
       html += `</button>`;
@@ -432,6 +444,129 @@ function showConversionResult(resultData) {
   }
 }
 
+const fileUploadForm = document.getElementById('file-upload-form');
+if (fileUploadForm) {
+  fileUploadForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const fileInput = fileUploadForm.querySelector('input[name="file"]');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+      showAlert('Please select a file', 'Input Required');
+      return;
+    }
+    
+    const file = fileInput.files[0];
+    const deviceToggleEl = document.getElementById('device-toggle');
+    const device = deviceToggleEl ? (deviceToggleEl.checked ? 'gpu' : 'cpu') : 'gpu';
+    
+    const conversionTimeDisplay = document.getElementById('conversionTimeDisplay');
+    if (conversionTimeDisplay) conversionTimeDisplay.style.display = 'none';
+    
+    showProgress();
+    if (progressText) progressText.textContent = 'Uploading file...';
+    if (progressFill) progressFill.style.width = '10%';
+    
+    convertToStopButton('convert-button');
+    isStopped = false;
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('device', device);
+      
+      const uploadResponse = await fetch('/api/upload-media', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+      
+      const uploadData = await uploadResponse.json();
+      
+      if (uploadData.task_id) {
+        currentTaskId = uploadData.task_id;
+        if (progressText) progressText.textContent = 'Processing...';
+        if (progressFill) progressFill.style.width = '30%';
+        
+        let attempts = 0;
+        const maxAttempts = 300;
+        
+        while (!isStopped && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          if (isStopped) break;
+          
+          try {
+            const statusResponse = await fetch(`/api/status/${currentTaskId}`);
+            const statusData = await statusResponse.json();
+            
+            if (statusData.status === 'completed') {
+              if (!isStopped) {
+                if (progressFill) progressFill.style.width = '100%';
+                if (progressText) progressText.textContent = 'Done!';
+                
+                setTimeout(() => {
+                  hideProgress();
+                  showConversionResult({
+                    status: 'completed',
+                    midi_name: statusData.midi_name,
+                    download_url: statusData.download_url,
+                    conversion_time: statusData.conversion_time,
+                    type: statusData.type || 'upload',
+                    mp3_name: file.name,
+                    library: statusData.library || 'Transkun',
+                    timestamp: statusData.timestamp
+                  });
+                  resetButtonStates();
+                }, 500);
+              }
+              return;
+            } else if (statusData.status === 'cancelled') {
+              isStopped = true;
+              if (progressText) progressText.textContent = 'Cancelled';
+              break;
+            } else if (statusData.status === 'error') {
+              throw new Error(statusData.error || 'Conversion failed');
+            } else {
+              if (!isStopped) {
+                if (progressText) progressText.textContent = statusData.progress || 'Processing...';
+                if (progressFill) progressFill.style.width = `${30 + (attempts / maxAttempts) * 60}%`;
+              }
+            }
+          } catch (err) {
+            console.error('Status check error:', err);
+            if (isStopped) break;
+          }
+          
+          attempts++;
+        }
+        
+        if (isStopped) {
+          resetButtonStates();
+          hideProgress();
+          currentTaskId = null;
+          return;
+        }
+        
+        if (attempts >= maxAttempts) {
+          throw new Error('Conversion timeout');
+        }
+      } else {
+        throw new Error('No task ID received');
+      }
+    } catch (err) {
+      showAlert('Error: ' + err.message, 'Error');
+      hideProgress();
+      resetButtonStates();
+    } finally {
+      currentTaskId = null;
+    }
+  });
+}
+
 const youtubeForm = document.querySelector('form input[name="media_url"]')?.closest('form');
 if (youtubeForm) {
   youtubeForm.addEventListener('submit', async function(e) {
@@ -447,16 +582,15 @@ if (youtubeForm) {
     
     const conversionTimeDisplay = document.getElementById('conversionTimeDisplay');
     if (conversionTimeDisplay) conversionTimeDisplay.style.display = 'none';
-    progressText.style.display = 'block';
-    progressBar.style.display = 'block';
-    progressText.textContent = 'Starting conversion...';
-    progressFill.style.width = '10%';
+    showProgress();
+    if (progressText) progressText.textContent = 'Starting conversion...';
+    if (progressFill) progressFill.style.width = '10%';
     convertToStopButton('convert-button-youtube');
     isStopped = false;
     
     try {
       const deviceToggleEl = document.getElementById('device-toggle');
-      const device = deviceToggleEl ? (deviceToggleEl.checked ? 'cuda' : 'cpu') : 'cuda';
+      const device = deviceToggleEl ? (deviceToggleEl.checked ? 'gpu' : 'cpu') : 'gpu';
       const response = await fetch('/api/convert', {
         method: 'POST',
         headers: {
@@ -495,8 +629,7 @@ if (youtubeForm) {
               progressText.textContent = 'Done!';
               
               setTimeout(function() {
-                progressText.style.display = 'none';
-                progressBar.style.display = 'none';
+                hideProgress();
                 showConversionResult(statusData);
                 resetButtonStates();
               }, 500);
@@ -524,8 +657,7 @@ if (youtubeForm) {
       
       if (isStopped) {
         resetButtonStates();
-        progressText.style.display = 'none';
-        progressBar.style.display = 'none';
+        hideProgress();
         currentTaskId = null;
         return;
       }
@@ -535,8 +667,7 @@ if (youtubeForm) {
       }
     } catch (err) {
       showAlert('Error: ' + err.message, 'Error');
-      progressText.style.display = 'none';
-      progressBar.style.display = 'none';
+      hideProgress();
     } finally {
       currentTaskId = null;
     }
@@ -565,82 +696,194 @@ document.addEventListener('click', function(event) {
     }
     return;
   }
+
+  const visualizerBtn = event.target.closest('.piano-visualizer-btn');
+  if (visualizerBtn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const midiFilename = visualizerBtn.getAttribute('data-midi-filename');
+    if (midiFilename && typeof window.openPianoVisualizer === 'function') {
+      window.openPianoVisualizer(midiFilename);
+    }
+    return;
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  let dragCounter = 0;
+  let globalDragCounter = 0;
+  const globalDropOverlay = document.getElementById('global-drop-overlay');
+  const fileInput = document.querySelector('input[name="file"]');
+  const fileUploadForm = document.getElementById('file-upload-form');
   
-  document.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter++;
+  const allowedExtensions = ['mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg', 'opus', 'wma', 
+                             'mp4', 'webm', 'avi', 'mov', 'mkv', 'flv', 'wmv', 'm4v',
+                             'mid', 'midi'];
+  
+  function isValidFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    return allowedExtensions.includes(ext);
+  }
+  
+  function handleFiles(files) {
+    const validFiles = Array.from(files).filter(isValidFile);
+    if (validFiles.length === 0) return;
     
-    const files = Array.from(e.dataTransfer.files || []);
-    const hasMidiFiles = files.some(file => {
+    const midiFiles = validFiles.filter(file => {
       const ext = file.name.split('.').pop().toLowerCase();
       return ext === 'mid' || ext === 'midi';
     });
     
-    if (hasMidiFiles) {
-      document.body.style.border = '3px dashed #9333ea';
-      document.body.style.backgroundColor = 'rgba(147, 51, 234, 0.1)';
-    }
-  });
-  
-  document.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter--;
-    
-    if (dragCounter === 0) {
-      document.body.style.border = '';
-      document.body.style.backgroundColor = '';
-    }
-  });
-  
-  document.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter = 0;
-    document.body.style.border = '';
-    document.body.style.backgroundColor = '';
-    
-    const files = Array.from(e.dataTransfer.files);
-    const midiFiles = files.filter(file => {
+    const mediaFiles = validFiles.filter(file => {
       const ext = file.name.split('.').pop().toLowerCase();
-      return ext === 'mid' || ext === 'midi';
+      return ext !== 'mid' && ext !== 'midi';
     });
     
-    if (midiFiles.length === 0) {
-      return;
-    }
-    
-    for (const file of midiFiles) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const uploadResponse = await fetch('/api/upload-midi', {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!uploadResponse.ok) {
-          const error = await uploadResponse.json();
-          throw new Error(error.error || 'Upload failed');
-        }
-        
-        const uploadData = await uploadResponse.json();
-        
-        if (typeof viewTempoText === 'function') {
-          const fileName = file.name.replace(/\.(mid|midi)$/i, '');
-          viewTempoText(uploadData.midi_filename, fileName);
-        }
-        
-      } catch (error) {
-        console.error('Error processing MIDI file:', error);
-        showAlert(`Failed to process ${file.name}: ${error.message}`, 'Error');
+    if (midiFiles.length > 0) {
+      for (const file of midiFiles) {
+        handleMidiFile(file);
       }
+    }
+    
+    if (mediaFiles.length > 0) {
+      for (const file of mediaFiles) {
+        handleMediaFile(file);
+      }
+    }
+  }
+  
+  async function handleMidiFile(file) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const uploadResponse = await fetch('/api/upload-midi', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!uploadResponse.ok) {
+        const error = await uploadResponse.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+      
+      const uploadData = await uploadResponse.json();
+      
+      if (typeof viewTempoText === 'function') {
+        const fileName = file.name.replace(/\.(mid|midi)$/i, '');
+        viewTempoText(uploadData.midi_filename, fileName);
+      }
+      
+    } catch (error) {
+      console.error('Error processing MIDI file:', error);
+      showAlert(`Failed to process ${file.name}: ${error.message}`, 'Error');
+    }
+  }
+  
+  async function handleMediaFile(file) {
+    try {
+      if (fileInput) {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+        
+        if (fileUploadForm) {
+          const formData = new FormData(fileUploadForm);
+          const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+          fileUploadForm.dispatchEvent(submitEvent);
+          
+          if (!submitEvent.defaultPrevented) {
+            fileUploadForm.submit();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error processing media file:', error);
+      showAlert(`Failed to process ${file.name}: ${error.message}`, 'Error');
+    }
+  }
+  
+  function showGlobalDropOverlay() {
+    if (globalDropOverlay) {
+      globalDropOverlay.classList.add('active');
+      globalDropOverlay.setAttribute('aria-hidden', 'false');
+    }
+  }
+  
+  function hideGlobalDropOverlay() {
+    if (globalDropOverlay) {
+      globalDropOverlay.classList.remove('active');
+      globalDropOverlay.setAttribute('aria-hidden', 'true');
+    }
+  }
+  
+  /* Full-screen drop overlay: show when dragging files anywhere on the page */
+  if (globalDropOverlay) {
+    document.addEventListener('dragenter', (e) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault();
+        globalDragCounter = 1;
+        showGlobalDropOverlay();
+      }
+    });
+    
+    document.addEventListener('dragover', (e) => {
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    });
+    
+    globalDropOverlay.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      globalDragCounter++;
+    });
+    
+    globalDropOverlay.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'copy';
+    });
+    
+    globalDropOverlay.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      globalDragCounter--;
+      /* hide when counter hits 0 or when leaving the window (relatedTarget is null) */
+      if (globalDragCounter <= 0 || !e.relatedTarget) {
+        globalDragCounter = 0;
+        hideGlobalDropOverlay();
+      }
+    });
+    
+    globalDropOverlay.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      globalDragCounter = 0;
+      hideGlobalDropOverlay();
+      const files = Array.from(e.dataTransfer.files);
+      handleFiles(files);
+    });
+  }
+  
+  document.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    const files = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file && isValidFile(file)) {
+          files.push(file);
+        }
+      }
+    }
+    
+    if (files.length > 0) {
+      e.preventDefault();
+      handleFiles(files);
     }
   });
 });

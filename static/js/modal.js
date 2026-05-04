@@ -74,3 +74,4 @@ function showConfirm(message, title = 'Confirm') {
     });
   });
 }
+
