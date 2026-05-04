@@ -185,3 +185,15 @@ Local files and folders:
 
 - **QWERTY Sheet Converter**: Based on [midi-converter](https://github.com/ArijanJ/midi-converter) by [@ArijanJ](https://github.com/ArijanJ) and [@Albacusphetical](https://github.com/Albacusphetical)
 - **Transkun**: [Audio-to-MIDI transcription](https://github.com/Yujia-Yan/Transkun)
+- **FFmpeg**: Audio/video decoding and format conversion
+- **yt-dlp**: YouTube, TikTok, and media link downloading
+- **PyTorch**: CUDA, MPS, and CPU tensor runtime used by Transkun
+- **Flask, Werkzeug, Flask-WTF, and Flask-Talisman**: Web server, forms, CSRF handling, and security headers
+- **pretty-midi and SciPy**: MIDI processing and timing utilities
+- **Requests**: HTTP requests and metadata downloads
+- **pywebview and pywin32**: Optional desktop window mode and Windows integration
+- **Tailwind CSS**: Frontend utility styling
+- **@tonejs/midi**: Browser-side MIDI parsing for the piano visualizer
+- **js-synthesizer and FluidSynth**: SoundFont-based MIDI playback in the piano visualizer
+- **SoundFont and wallpaper creators**: Local files in `soundfonts/` and `wallpapers/` belong to their respective creators and licenses
+- **Open-source maintainers**: Additional direct and transitive dependencies are listed in `requirements.txt` and `package-lock.json`
