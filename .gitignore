@@ -79,7 +79,6 @@ app.log
 cookies.txt
 settings.local.json
 wallpapers/
-soundfonts/*.sf2
 
 # Flask stuff:
 instance/
