@@ -602,7 +602,6 @@ def download_mp3_from_tiktok(tiktok_url: str, output_dir: str,
     outtmpl = os.path.join(output_dir, '%(title)s.%(ext)s')
     
     ydl_opts: dict = {
-        'proxy': 'http://gSgLbY:8ktUfE@103.78.189.230:8000',
         'format': 'bestaudio/best',
         'outtmpl': outtmpl,
         'restrictfilenames': True,
