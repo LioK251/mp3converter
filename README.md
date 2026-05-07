@@ -33,29 +33,11 @@ cd audioconverter-web
 
 ### Step 2: Install Python Dependencies
 
-**For RTX 50xx Series GPUs (CUDA 12.9):**
-
-If you have an RTX 50xx series GPU, install PyTorch with CUDA 12.9 support first:
-
-```bash
-python -m pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu129
-```
-
-**Important:** All three packages (torch, torchvision, torchaudio) must be installed from the same source to ensure compatibility.
-
-Then install the application dependencies:
+Install all required packages, including PyTorch with CUDA support, in one go:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
-
-**For other GPUs or CPU-only:**
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-This installs Flask, Flask-WTF, Werkzeug, PyTorch, yt-dlp, Transkun, pretty-midi, scipy, requests, Flask-Talisman, and pywebview.
 
 ### Step 3: Install Transkun
 
