@@ -36,18 +36,6 @@ cd mp3converter
 python -m venv .venv
 ```
 
-Activate the virtual environment:
-
-```powershell
-# Windows PowerShell
-.\.venv\Scripts\Activate.ps1
-```
-
-```bash
-# macOS or Linux
-source .venv/bin/activate
-```
-
 Install the Python dependencies:
 
 ```bash
@@ -81,27 +69,6 @@ python app_gui.py
 The Windows launchers `run.bat` and `run_app.bat` perform the same actions. macOS launchers are provided as `run.command` and `run_app.command`.
 
 By default, the server is available at `http://127.0.0.1:5000`.
-
-## Optional local files
-
-These files are deliberately excluded from Git because they contain user data, credentials, third-party media, or very large binaries:
-
-- `cookies.txt` — optional Netscape-format cookies used by yt-dlp.
-- `soundfonts/*.sf2` — local SoundFont files for the piano visualizer.
-- `wallpapers/` — custom image or video backgrounds.
-- `uploads/`, `converted/`, `history.json`, `settings.json`, `instance/` — runtime data.
-
-Create an empty cookies file from the safe template only if you need it:
-
-```powershell
-Copy-Item cookies.example.txt cookies.txt
-```
-
-```bash
-cp cookies.example.txt cookies.txt
-```
-
-Never commit real browser cookies. If they were ever published, revoke the affected sessions and rotate the cookies.
 
 The piano visualizer works without a SoundFont selection, but local SoundFont playback requires placing a legally distributable `.sf2` file in `soundfonts/`.
 
