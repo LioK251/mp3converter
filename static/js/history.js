@@ -58,6 +58,7 @@ function addToHistory(resultData) {
       youtube_url: resultData.youtube_url,
       tiktok_url: resultData.tiktok_url,
       discord_url: resultData.discord_url,
+      musescore_url: resultData.musescore_url,
       midi_name: resultData.midi_name,
       download_url: resultData.download_url,
       conversion_time: resultData.conversion_time,
@@ -89,7 +90,22 @@ function addToHistory(resultData) {
   }
 }
 
-function createHistoryItemHTML(item) {
+function createHistoryItemHTML(rawItem) {
+  // Escape everything that ends up in innerHTML — titles and URLs come from
+  // external metadata (YouTube/TikTok titles) and must not inject markup.
+  const item = Object.assign({}, rawItem, {
+    video_id: escapeHtml(rawItem.video_id),
+    video_title: escapeHtml(rawItem.video_title),
+    youtube_url: escapeHtml(rawItem.youtube_url),
+    tiktok_url: escapeHtml(rawItem.tiktok_url),
+    discord_url: escapeHtml(rawItem.discord_url),
+    musescore_url: escapeHtml(rawItem.musescore_url),
+    thumbnail_url: escapeHtml(rawItem.thumbnail_url),
+    mp3_name: escapeHtml(rawItem.mp3_name),
+    midi_name: escapeHtml(rawItem.midi_name),
+    download_url: escapeHtml(rawItem.download_url),
+    library: escapeHtml(rawItem.library),
+  });
   let html = '<div class="history-item p-3 rounded-xl bg-gray-700/40 border border-gray-700 hover-effect flex flex-col min-h-0">';
   html += '<div class="history-card-header flex items-start justify-between gap-3">';
   html += '<div class="history-badge-row flex items-start gap-2">';
@@ -100,6 +116,8 @@ function createHistoryItemHTML(item) {
     html += '<span class="badge-tiktok px-2 py-0.5 text-[10px] rounded-full bg-purple-600/30 text-purple-200 border border-purple-700">TikTok</span>';
   } else if (item.type === 'discord') {
     html += '<span class="badge-discord px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">Discord</span>';
+  } else if (item.type === 'musescore') {
+    html += '<span class="badge-musescore px-2 py-0.5 text-[10px] rounded-full bg-sky-600/30 text-sky-300 border border-sky-700">MuseScore</span>';
   } else {
     html += '<span class="badge-mp3 px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">MP3</span>';
   }
@@ -159,14 +177,28 @@ function createHistoryItemHTML(item) {
     html += `<a class="underline hover-effect" href="${item.discord_url || '#'}" target="_blank" rel="noopener">${item.video_title || item.discord_url || ''}</a>`;
     html += '</div>';
   }
+  else if (item.type === 'musescore') {
+    if (item.thumbnail_url && item.thumbnail_url.trim()) {
+      html += `<a href="${item.musescore_url || '#'}" target="_blank" rel="noopener" class="history-thumb-link hover-effect">`;
+      html += `<img src="${item.thumbnail_url}" alt="score" loading="lazy" class="history-thumb" onerror="this.onerror=null; this.src='/templates/notfound.jpg';" />`;
+      html += '</a>';
+    } else {
+      html += '<div class="history-thumb-shell hover-effect">';
+      html += '<img src="/templates/notfound.jpg" alt="score" loading="lazy" class="history-thumb w-full rounded-lg border border-gray-700" />';
+      html += '</div>';
+    }
+    html += `<div class="history-item-title text-gray-300" title="${item.video_title || item.musescore_url || ''}">`;
+    html += `<a class="underline hover-effect" href="${item.musescore_url || '#'}" target="_blank" rel="noopener">${item.video_title || item.musescore_url || ''}</a>`;
+    html += '</div>';
+  }
   else {
     html += '<div class="history-thumb-shell hover-effect">';
     html += '<img src="/templates/notfound.jpg" alt="thumb" loading="lazy" class="history-thumb w-full rounded-lg border border-gray-700" />';
     html += '</div>';
     html += '<div class="history-item-title text-gray-300">File: ';
     if (item.mp3_name) {
-      const mp3Url = item.mp3_url || `/uploads/${item.mp3_name}`;
-      html += `<a class="underline hover-effect" href="${mp3Url}" target="_blank" rel="noopener">${item.mp3_name}</a>`;
+      // Plain text: the source MP3 is deleted after conversion, a link would 404
+      html += `<span class="break-all">${item.mp3_name}</span>`;
     } else {
       html += '—';
     }
@@ -206,146 +238,206 @@ function createHistoryItemHTML(item) {
 let fullHistoryData = [];
 let allMidiFilesData = [];
 
-function filterHistoryItems(searchQuery) {
-  const historyList = document.getElementById('full-history-list');
-  if (!historyList) return;
-  
-  if (!searchQuery || searchQuery.trim() === '') {
-    displayHistoryItems(fullHistoryData, []);
-    return;
-  }
-  
-  const query = searchQuery.toLowerCase().trim();
-  const filtered = fullHistoryData.filter(item => {
-    if (item.video_title && item.video_title.toLowerCase().includes(query)) return true;
-    if (item.video_id && item.video_id.toLowerCase().includes(query)) return true;
-    if (item.youtube_url && item.youtube_url.toLowerCase().includes(query)) return true;
-    if (item.tiktok_url && item.tiktok_url.toLowerCase().includes(query)) return true;
-    if (item.discord_url && item.discord_url.toLowerCase().includes(query)) return true;
-    if (item.midi_name && item.midi_name.toLowerCase().includes(query)) return true;
-    if (item.mp3_name && item.mp3_name.toLowerCase().includes(query)) return true;
-    if (item.library && item.library.toLowerCase().includes(query)) return true;
-    if (item.type && item.type.toLowerCase().includes(query)) return true;
-    return false;
-  });
-  
-  // Also search MIDI files and exclude ones already shown in history results
-  const historyMidiNames = new Set(filtered.map(h => h.midi_name).filter(Boolean));
-  const filteredMidis = allMidiFilesData.filter(mf => {
-    if (historyMidiNames.has(mf.filename)) return false;
-    if (mf.filename && mf.filename.toLowerCase().includes(query)) return true;
-    if (mf.video_title && mf.video_title.toLowerCase().includes(query)) return true;
-    if (mf.source_type && mf.source_type.toLowerCase().includes(query)) return true;
-    if (mf.source_url && mf.source_url.toLowerCase().includes(query)) return true;
-    return false;
-  });
-  
-  displayHistoryItems(filtered, filteredMidis);
+// Full History is paginated: conversions and MIDI files from the converted
+// folder are merged into one list, newest first, 100 cards per page.
+const HISTORY_PAGE_SIZE = 100;
+let historyCurrentPage = 1;
+let historySearchQuery = '';
+
+function matchesQuery(value, query) {
+  return typeof value === 'string' && value.toLowerCase().includes(query);
 }
 
-function displayHistoryItems(items, midiFiles) {
+// Merge history entries + converted-folder files into one time-sorted list.
+function buildHistoryEntries(query) {
+  const q = (query || '').toLowerCase().trim();
+  const entries = [];
+
+  const historyItems = q
+    ? fullHistoryData.filter(item => (
+        matchesQuery(item.video_title, q) ||
+        matchesQuery(item.video_id, q) ||
+        matchesQuery(item.youtube_url, q) ||
+        matchesQuery(item.tiktok_url, q) ||
+        matchesQuery(item.discord_url, q) ||
+        matchesQuery(item.musescore_url, q) ||
+        matchesQuery(item.midi_name, q) ||
+        matchesQuery(item.mp3_name, q) ||
+        matchesQuery(item.library, q) ||
+        matchesQuery(item.type, q)
+      ))
+    : fullHistoryData;
+
+  historyItems.forEach(item => {
+    entries.push({ kind: 'history', ts: item.timestamp || 0, data: item });
+  });
+
+  // MIDI files already represented by a history card would be duplicates
+  const historyMidiNames = new Set(fullHistoryData.map(h => h.midi_name).filter(Boolean));
+
+  allMidiFilesData.forEach(mf => {
+    if (historyMidiNames.has(mf.filename)) return;
+    if (q && !(
+      matchesQuery(mf.filename, q) ||
+      matchesQuery(mf.video_title, q) ||
+      matchesQuery(mf.source_type, q) ||
+      matchesQuery(mf.source_url, q)
+    )) return;
+    entries.push({ kind: 'midi', ts: mf.modified_time || 0, data: mf });
+  });
+
+  entries.sort((a, b) => b.ts - a.ts);
+  return entries;
+}
+
+function renderHistoryPagination(totalEntries, totalPages) {
+  const container = document.getElementById('history-pagination');
+  if (!container) return;
+
+  if (totalEntries === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const first = (historyCurrentPage - 1) * HISTORY_PAGE_SIZE + 1;
+  const last = Math.min(historyCurrentPage * HISTORY_PAGE_SIZE, totalEntries);
+
+  // Window of page numbers around the current page
+  const pages = [];
+  const windowSize = 2;
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === 1 || p === totalPages || Math.abs(p - historyCurrentPage) <= windowSize) {
+      pages.push(p);
+    } else if (pages[pages.length - 1] !== '…') {
+      pages.push('…');
+    }
+  }
+
+  let html = '<div class="history-pagination-info">Showing ' + first + '–' + last + ' of ' + totalEntries + '</div>';
+  html += '<div class="history-pagination-controls">';
+  html += '<button class="history-page-btn" data-page="' + (historyCurrentPage - 1) + '"' +
+          (historyCurrentPage <= 1 ? ' disabled' : '') + '>Prev</button>';
+  pages.forEach(p => {
+    if (p === '…') {
+      html += '<span class="history-page-gap">…</span>';
+    } else {
+      html += '<button class="history-page-btn' + (p === historyCurrentPage ? ' active' : '') +
+              '" data-page="' + p + '">' + p + '</button>';
+    }
+  });
+  html += '<button class="history-page-btn" data-page="' + (historyCurrentPage + 1) + '"' +
+          (historyCurrentPage >= totalPages ? ' disabled' : '') + '>Next</button>';
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+function renderHistoryPage() {
   const historyList = document.getElementById('full-history-list');
   if (!historyList) return;
-  
+
+  const entries = buildHistoryEntries(historySearchQuery);
+  const totalPages = Math.max(1, Math.ceil(entries.length / HISTORY_PAGE_SIZE));
+  if (historyCurrentPage > totalPages) historyCurrentPage = totalPages;
+  if (historyCurrentPage < 1) historyCurrentPage = 1;
+
   const isCurrentlyHidden = historyList.style.opacity === '0';
-  
   if (!isCurrentlyHidden) {
     historyList.style.opacity = '0';
     historyList.style.transition = 'opacity 0.2s ease-in-out';
   }
-  
-  const hasMidis = midiFiles && midiFiles.length > 0;
-  const hasItems = items && items.length > 0;
-  
-  if (!hasItems && !hasMidis) {
-    historyList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">No results found.</div>';
+
+  const revealList = () => {
     if (!isCurrentlyHidden) {
       setTimeout(() => {
         requestAnimationFrame(() => { historyList.style.opacity = '1'; });
       }, 200);
     }
+  };
+
+  if (entries.length === 0) {
+    historyList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">No results found.</div>';
+    renderHistoryPagination(0, 1);
+    revealList();
     return;
   }
-  
+
+  const start = (historyCurrentPage - 1) * HISTORY_PAGE_SIZE;
+  const pageEntries = entries.slice(start, start + HISTORY_PAGE_SIZE);
+
   const fragment = document.createDocumentFragment();
-  
-  if (hasItems) {
-    items.forEach(item => {
-      const itemHTML = createHistoryItemHTML(item);
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = itemHTML.trim();
-      const el = tempDiv.firstElementChild;
-      if (el) fragment.appendChild(el);
-    });
-  }
-  
-  // Append MIDI file results (from converted folder, not in history)
-  if (hasMidis && typeof createMidiFileItemHTML === 'function') {
-    // Separator
-    const sep = document.createElement('div');
-    sep.className = 'col-span-full flex items-center gap-3 py-2';
-    sep.innerHTML = '<div class="flex-1 h-px bg-gray-600"></div><span class="text-xs text-gray-400 shrink-0">MIDI Files (' + midiFiles.length + ')</span><div class="flex-1 h-px bg-gray-600"></div>';
-    fragment.appendChild(sep);
-    
-    midiFiles.forEach(mf => {
-      const html = createMidiFileItemHTML(mf);
-      const tmp = document.createElement('div');
-      tmp.innerHTML = html.trim();
-      const el = tmp.firstElementChild;
-      if (el) fragment.appendChild(el);
-    });
-  }
-  
+  pageEntries.forEach(entry => {
+    let html = '';
+    if (entry.kind === 'history') {
+      html = createHistoryItemHTML(entry.data);
+    } else if (entry.kind === 'midi' && typeof createMidiFileItemHTML === 'function') {
+      html = createMidiFileItemHTML(entry.data);
+    }
+    if (!html) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html.trim();
+    const el = tmp.firstElementChild;
+    if (el) fragment.appendChild(el);
+  });
+
   historyList.innerHTML = '';
   historyList.appendChild(fragment);
-  
-  if (!isCurrentlyHidden) {
-    setTimeout(() => {
-      requestAnimationFrame(() => { historyList.style.opacity = '1'; });
-    }, 200);
+  renderHistoryPagination(entries.length, totalPages);
+  revealList();
+}
+
+// Kept for callers elsewhere in the app
+function displayHistoryItems() {
+  renderHistoryPage();
+}
+
+function filterHistoryItems(searchQuery) {
+  historySearchQuery = searchQuery || '';
+  historyCurrentPage = 1;
+  renderHistoryPage();
+}
+
+async function fetchHistorySources() {
+  const [historyRes, midiRes] = await Promise.all([
+    fetch('/api/history?limit=500'),
+    fetch('/api/midi-files?_=' + Date.now()),
+  ]);
+
+  if (!historyRes.ok) throw new Error(`HTTP error! status: ${historyRes.status}`);
+
+  fullHistoryData = (await historyRes.json()) || [];
+
+  if (midiRes.ok) {
+    const midiData = await midiRes.json();
+    allMidiFilesData = midiData.midi_files || [];
   }
 }
 
 async function loadFullHistory() {
   const historyList = document.getElementById('full-history-list');
   if (!historyList) return;
-  
+
   const wasAlreadyFading = historyList.style.opacity === '0';
-  
+
   if (!wasAlreadyFading) {
     historyList.style.opacity = '0';
     historyList.style.transition = 'opacity 0.2s ease-in-out';
   }
-  
+
   if (!wasAlreadyFading) {
     requestAnimationFrame(() => {
       historyList.innerHTML = '<div class="text-center text-gray-400 py-6 col-span-full text-sm">Loading history...</div>';
     });
   }
-  
+
   try {
-    const [historyRes, midiRes] = await Promise.all([
-      fetch('/api/history?limit=500'),
-      fetch('/api/midi-files?_=' + Date.now()),
-    ]);
-    
-    if (!historyRes.ok) throw new Error(`HTTP error! status: ${historyRes.status}`);
-    
-    const history = await historyRes.json();
-    fullHistoryData = history || [];
-    
-    if (midiRes.ok) {
-      const midiData = await midiRes.json();
-      allMidiFilesData = midiData.midi_files || [];
-    }
-    
+    await fetchHistorySources();
+
     const searchInput = document.getElementById('history-search-input');
-    if (searchInput && searchInput.value.trim()) {
-      filterHistoryItems(searchInput.value);
-    } else {
-      displayHistoryItems(fullHistoryData, []);
-    }
-    
+    historySearchQuery = searchInput ? searchInput.value : '';
+    historyCurrentPage = 1;
+    renderHistoryPage();
+
     if (wasAlreadyFading) {
       setTimeout(() => {
         requestAnimationFrame(() => { historyList.style.opacity = '1'; });
@@ -356,7 +448,7 @@ async function loadFullHistory() {
   } catch (error) {
     console.error('Error loading history:', error);
     historyList.innerHTML = `<div class="text-center text-red-400 py-6 col-span-full text-sm">Error loading history: ${error.message}</div>`;
-    
+
     if (wasAlreadyFading) {
       setTimeout(() => {
         requestAnimationFrame(() => { historyList.style.opacity = '1'; });
@@ -367,6 +459,20 @@ async function loadFullHistory() {
   }
 }
 
+const historyPagination = document.getElementById('history-pagination');
+if (historyPagination) {
+  historyPagination.addEventListener('click', (e) => {
+    const btn = e.target.closest('.history-page-btn');
+    if (!btn || btn.disabled) return;
+    const page = parseInt(btn.getAttribute('data-page'), 10);
+    if (isNaN(page) || page === historyCurrentPage) return;
+    historyCurrentPage = page;
+    renderHistoryPage();
+    const list = document.getElementById('full-history-list');
+    if (list) list.scrollTop = 0;
+  });
+}
+
 const refreshHistoryBtn = document.getElementById('refresh-history-btn');
 if (refreshHistoryBtn) {
   refreshHistoryBtn.addEventListener('click', async () => {
@@ -375,35 +481,19 @@ if (refreshHistoryBtn) {
       loadFullHistory();
       return;
     }
-    
+
     historyList.style.opacity = '0';
     historyList.style.transition = 'opacity 0.2s ease-in-out';
-    
+
     await new Promise(resolve => setTimeout(resolve, 200));
-    
+
     try {
-      const [historyRes, midiRes] = await Promise.all([
-        fetch('/api/history?limit=500'),
-        fetch('/api/midi-files?_=' + Date.now()),
-      ]);
-      
-      if (!historyRes.ok) throw new Error(`HTTP error! status: ${historyRes.status}`);
-      
-      const history = await historyRes.json();
-      fullHistoryData = history || [];
-      
-      if (midiRes.ok) {
-        const midiData = await midiRes.json();
-        allMidiFilesData = midiData.midi_files || [];
-      }
-      
+      await fetchHistorySources();
+
       const searchInput = document.getElementById('history-search-input');
-      if (searchInput && searchInput.value.trim()) {
-        filterHistoryItems(searchInput.value);
-      } else {
-        displayHistoryItems(fullHistoryData, []);
-      }
-      
+      historySearchQuery = searchInput ? searchInput.value : '';
+      renderHistoryPage();
+
       requestAnimationFrame(() => { historyList.style.opacity = '1'; });
     } catch (error) {
       console.error('Error loading history:', error);

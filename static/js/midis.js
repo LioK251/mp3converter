@@ -8,7 +8,16 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-function createMidiFileItemHTML(item) {
+function createMidiFileItemHTML(rawItem) {
+  // Escape external metadata before it reaches innerHTML (see history.js)
+  const item = Object.assign({}, rawItem, {
+    filename: escapeHtml(rawItem.filename),
+    video_title: escapeHtml(rawItem.video_title),
+    thumbnail_url: escapeHtml(rawItem.thumbnail_url),
+    source_url: escapeHtml(rawItem.source_url),
+    download_url: escapeHtml(rawItem.download_url),
+    time_str: escapeHtml(rawItem.time_str),
+  });
   let html = '<div class="history-item p-3 rounded-xl bg-gray-700/40 border border-gray-700 hover-effect flex flex-col min-h-0">';
 
   // Header row with badge
@@ -20,6 +29,7 @@ function createMidiFileItemHTML(item) {
       youtube: { cls: 'badge-youtube', bg: 'bg-red-600/30', text: 'text-red-300', border: 'border-red-700', label: 'YouTube' },
       tiktok: { cls: 'badge-tiktok', bg: 'bg-purple-600/30', text: 'text-purple-200', border: 'border-purple-700', label: 'TikTok' },
       discord: { cls: 'badge-discord', bg: 'bg-indigo-600/30', text: 'text-indigo-300', border: 'border-indigo-700', label: 'Discord' },
+      musescore: { cls: 'badge-musescore', bg: 'bg-sky-600/30', text: 'text-sky-300', border: 'border-sky-700', label: 'MuseScore' },
       upload: { cls: 'badge-mp3', bg: 'bg-indigo-600/30', text: 'text-indigo-300', border: 'border-indigo-700', label: 'Upload' },
     };
     const badge = badgeMap[item.source_type] || badgeMap.upload;

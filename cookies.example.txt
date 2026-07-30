@@ -1,0 +1,4 @@
+# Netscape HTTP Cookie File
+#
+# Optional template for yt-dlp. Export your own cookies to cookies.txt only
+# when required. The real cookies.txt file is ignored by Git.

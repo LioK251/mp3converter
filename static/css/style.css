@@ -490,6 +490,12 @@ label .bg-gray-600 {
     color: #67e8f9 !important;
 }
 
+.badge-musescore {
+    background-color: rgba(2, 132, 199, 0.3) !important;
+    border-color: #0369a1 !important;
+    color: #7dd3fc !important;
+}
+
 .download-midi-btn {
     background-color: var(--success-button-bg) !important;
     border-color: var(--success-button-border) !important;
@@ -770,6 +776,57 @@ input[type="text"]:focus, select:focus {
     }
 }
 
+/* Full History pagination */
+.history-pagination:empty {
+    display: none;
+}
+.history-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-top: 0.25rem;
+}
+.history-pagination-info {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #9ca3af);
+}
+.history-pagination-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+}
+.history-page-btn {
+    min-width: 32px;
+    min-height: 30px;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--primary-button-border, #1d4ed8);
+    background-color: var(--primary-button-bg, rgba(37, 99, 235, 0.2));
+    color: var(--primary-button-text, #93c5fd);
+    cursor: pointer;
+}
+.history-page-btn:hover:not(:disabled) {
+    background-color: var(--primary-button-hover-bg, rgba(37, 99, 235, 0.3));
+    border-color: var(--primary-button-hover-border, #3b82f6);
+}
+.history-page-btn.active {
+    background-color: var(--primary-button-hover-bg, rgba(37, 99, 235, 0.45));
+    font-weight: 600;
+}
+.history-page-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.history-page-gap {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    padding: 0 0.15rem;
+}
+
 .piano-visualizer-stage {
     height: min(62vh, 640px);
     min-height: 360px;
@@ -1000,12 +1057,51 @@ iframe:hover {
 }
 .history-card {
     overflow-y: auto;
-    width: 530.39px;
-    max-width: 530.39px;
-    flex: 0 0 530.39px;
+    width: 100%;
     height: 516.98px !important;
     max-height: 516.98px !important;
     contain: layout style paint;
+}
+/* Fixed sidebar width only when the layout is two-column (lg and up) */
+@media (min-width: 1024px) {
+    .history-card {
+        width: 530.39px;
+        max-width: 530.39px;
+        flex: 0 0 530.39px;
+    }
+}
+/* Mobile: let the history card size to content instead of a fixed height */
+@media (max-width: 640px) {
+    .history-card {
+        height: auto !important;
+        max-height: 70vh !important;
+        padding: 1rem !important;
+    }
+    .main-card {
+        padding: 1.25rem !important;
+    }
+    .tab-button {
+        padding: 10px 14px;
+        font-size: 0.9rem;
+    }
+    #full-history-list .history-item,
+    #midi-files-list .history-item {
+        min-height: 0;
+    }
+    .conversion-time,
+    .error-message {
+        font-size: 0.95rem;
+    }
+}
+/* Respect users (and save battery) that ask for less motion */
+@media (prefers-reduced-motion: reduce) {
+    body,
+    body.has-wallpaper {
+        animation: none;
+    }
+    .progress-fill {
+        animation: none;
+    }
 }
 .chord-block {
     position: relative;

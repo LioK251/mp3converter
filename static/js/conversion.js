@@ -17,6 +17,32 @@ function hideProgress() {
   if (progressBar) progressBar.style.display = 'none';
 }
 
+function hideConversionError() {
+  const box = document.getElementById('conversion-error-box');
+  if (box) box.style.display = 'none';
+}
+
+// Show a conversion error inline on the page (persistent red box under the
+// progress bar) and as a modal alert, instead of only logging to the console.
+function showConversionError(message) {
+  hideProgress();
+  let box = document.getElementById('conversion-error-box');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'conversion-error-box';
+    box.className = 'error-message hover-effect';
+    const anchor = progressBar || progressText;
+    if (anchor && anchor.parentNode) {
+      anchor.parentNode.insertBefore(box, anchor.nextSibling);
+    } else {
+      document.body.appendChild(box);
+    }
+  }
+  box.textContent = message;
+  box.style.display = 'block';
+  if (typeof showAlert === 'function') showAlert(message, 'Conversion Error');
+}
+
 function attachLoadingState(id) {
   var button = document.getElementById(id);
   if (!button) return;
@@ -194,9 +220,11 @@ function showConversionResult(resultData) {
     let html = '';
     
     if (resultData.type === 'youtube' && resultData.video_id) {
-      const videoId = resultData.video_id;
-      const youtubeUrl = resultData.youtube_url || `https://www.youtube.com/watch?v=${videoId}`;
-      const thumbnailUrl = resultData.thumbnail_url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      // videoId goes into element ids, URLs and an inline onclick — strip it
+      // down to the safe YouTube id alphabet instead of trusting the server.
+      const videoId = String(resultData.video_id).replace(/[^\w-]/g, '');
+      const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const thumbnailUrl = escapeHtml(resultData.thumbnail_url) || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
       
       const embedUrlNoCookie = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&modestbranding=1&rel=0&controls=1&iv_load_policy=3&cc_load_policy=0&fs=1&playsinline=1&enablejsapi=1&origin=${window.location.origin}`;
       const embedUrlStandard = `https://www.youtube.com/embed/${videoId}?autoplay=0&modestbranding=1&rel=0&controls=1&iv_load_policy=3&cc_load_policy=0&fs=1&playsinline=1&enablejsapi=1&origin=${window.location.origin}`;
@@ -215,7 +243,7 @@ function showConversionResult(resultData) {
       
       if (resultData.video_title) {
         html += `<div class="mt-2 text-gray-300 text-sm">`;
-        html += `<a href="${youtubeUrl}" target="_blank" rel="noopener" class="underline hover-effect">${resultData.video_title}</a>`;
+        html += `<a href="${youtubeUrl}" target="_blank" rel="noopener" class="underline hover-effect">${escapeHtml(resultData.video_title)}</a>`;
         html += `</div>`;
       }
       
@@ -362,8 +390,8 @@ function showConversionResult(resultData) {
     } 
     else if (resultData.type === 'tiktok') {
       if (resultData.thumbnail_url && resultData.thumbnail_url.trim()) {
-      html = `<a href="${resultData.tiktok_url || '#'}" target="_blank" rel="noopener" class="block hover-effect">`;
-        html += `<img src="${resultData.thumbnail_url}" alt="Video thumbnail" style="width:100%; max-height:400px; height:auto; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" onerror="this.onerror=null; this.src='/templates/notfound.jpg';" />`;
+      html = `<a href="${escapeHtml(resultData.tiktok_url) || '#'}" target="_blank" rel="noopener" class="block hover-effect">`;
+        html += `<img src="${escapeHtml(resultData.thumbnail_url)}" alt="Video thumbnail" style="width:100%; max-height:400px; height:auto; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" onerror="this.onerror=null; this.src='/templates/notfound.jpg';" />`;
       html += `</a>`;
       } else {
         html = `<div class="block hover-effect">`;
@@ -371,10 +399,24 @@ function showConversionResult(resultData) {
         html += `</div>`;
       }
     }
+    else if (resultData.type === 'musescore') {
+      if (resultData.thumbnail_url && resultData.thumbnail_url.trim()) {
+        html = `<a href="${escapeHtml(resultData.musescore_url) || '#'}" target="_blank" rel="noopener" class="block hover-effect">`;
+        html += `<img src="${escapeHtml(resultData.thumbnail_url)}" alt="Score preview" style="width:100%; max-height:400px; height:auto; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" onerror="this.onerror=null; this.src='/templates/notfound.jpg';" />`;
+        html += `</a>`;
+      } else {
+        html = `<div class="block hover-effect">`;
+        html += `<img src="/templates/notfound.jpg" alt="Score preview" style="width:100%; max-height:400px; height:auto; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" />`;
+        html += `</div>`;
+      }
+      if (resultData.video_title) {
+        html += `<div class="text-gray-300 mt-2"><a class="underline hover-effect" href="${escapeHtml(resultData.musescore_url) || '#'}" target="_blank" rel="noopener">${escapeHtml(resultData.video_title)}</a></div>`;
+      }
+    }
     else if (resultData.type === 'discord') {
       if (resultData.thumbnail_url && resultData.thumbnail_url.trim()) {
-      html = `<a href="${resultData.discord_url || '#'}" target="_blank" rel="noopener" class="block hover-effect">`;
-        html += `<img src="${resultData.thumbnail_url}" alt="Video thumbnail" style="width:100%; max-height:400px; height:auto; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" onerror="this.onerror=null; this.src='/templates/notfound.jpg';" />`;
+      html = `<a href="${escapeHtml(resultData.discord_url) || '#'}" target="_blank" rel="noopener" class="block hover-effect">`;
+        html += `<img src="${escapeHtml(resultData.thumbnail_url)}" alt="Video thumbnail" style="width:100%; max-height:400px; height:auto; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;" onerror="this.onerror=null; this.src='/templates/notfound.jpg';" />`;
       html += `</a>`;
       } else {
         html = `<div class="block hover-effect">`;
@@ -384,19 +426,21 @@ function showConversionResult(resultData) {
     }
     
     if (resultData.download_url && resultData.midi_name) {
+      const downloadUrl = escapeHtml(resultData.download_url);
+      const midiName = escapeHtml(resultData.midi_name);
       html += `<div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">`;
       html += `<div class="history-primary-actions">`;
-      html += `<a href="${resultData.download_url}" class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect" download>`;
+      html += `<a href="${downloadUrl}" class="inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border border-emerald-700 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 hover-effect" download>`;
       html += `Download MIDI`;
       html += `</a>`;
-      html += `<button data-midi-filename="${resultData.midi_name}" class="piano-visualizer-btn inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border hover-effect">Visualize</button>`;
+      html += `<button data-midi-filename="${midiName}" class="piano-visualizer-btn inline-flex items-center justify-center w-full text-center text-sm font-medium px-3 py-2 rounded-lg border hover-effect">Visualize</button>`;
 
       html += `</div>`;
       html += `<div class="history-secondary-actions">`;
-      html += `<button data-midi-filename="${resultData.midi_name}" class="view-tempo-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">`;
+      html += `<button data-midi-filename="${midiName}" class="view-tempo-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-blue-700 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 hover-effect">`;
       html += `Convert to QWERTY`;
       html += `</button>`;
-      html += `<button data-midi-filename="${resultData.midi_name}" class="download-sheets-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-purple-700 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 hover-effect">`;
+      html += `<button data-midi-filename="${midiName}" class="download-sheets-btn flex-1 inline-flex items-center justify-center text-center text-sm font-medium px-3 py-2 rounded-lg border border-purple-700 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 hover-effect">`;
       html += `Download Sheets`;
       html += `</button>`;
       html += `</div>`;
@@ -461,7 +505,8 @@ if (fileUploadForm) {
     
     const conversionTimeDisplay = document.getElementById('conversionTimeDisplay');
     if (conversionTimeDisplay) conversionTimeDisplay.style.display = 'none';
-    
+
+    hideConversionError();
     showProgress();
     if (progressText) progressText.textContent = 'Uploading file...';
     if (progressFill) progressFill.style.width = '10%';
@@ -492,22 +537,36 @@ if (fileUploadForm) {
         if (progressFill) progressFill.style.width = '30%';
         
         let attempts = 0;
-        const maxAttempts = 300;
-        
+        const maxAttempts = 900; // 2s each — up to 30 min for long CPU conversions
+        let networkFailures = 0;
+
         while (!isStopped && attempts < maxAttempts) {
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
+
           if (isStopped) break;
-          
+
+          // Only network failures are retried here. Errors reported by the
+          // server are handled below, outside this try, so they surface
+          // immediately instead of being swallowed until the timeout.
+          let statusData = null;
           try {
             const statusResponse = await fetch(`/api/status/${currentTaskId}`);
-            const statusData = await statusResponse.json();
-            
+            statusData = await statusResponse.json();
+          } catch (err) {
+            console.error('Status check error:', err);
+            networkFailures++;
+            if (networkFailures >= 15) {
+              throw new Error('Lost connection to the server. Check that it is still running.');
+            }
+          }
+
+          if (statusData) {
+            networkFailures = 0;
             if (statusData.status === 'completed') {
               if (!isStopped) {
                 if (progressFill) progressFill.style.width = '100%';
                 if (progressText) progressText.textContent = 'Done!';
-                
+
                 setTimeout(() => {
                   hideProgress();
                   showConversionResult({
@@ -528,38 +587,33 @@ if (fileUploadForm) {
               isStopped = true;
               if (progressText) progressText.textContent = 'Cancelled';
               break;
-            } else if (statusData.status === 'error') {
+            } else if (statusData.status === 'error' || (!statusData.status && statusData.error)) {
+              // Includes "Task not found" after a server restart
               throw new Error(statusData.error || 'Conversion failed');
-            } else {
-              if (!isStopped) {
-                if (progressText) progressText.textContent = statusData.progress || 'Processing...';
-                if (progressFill) progressFill.style.width = `${30 + (attempts / maxAttempts) * 60}%`;
-              }
+            } else if (!isStopped) {
+              if (progressText) progressText.textContent = statusData.progress || 'Processing...';
+              if (progressFill) progressFill.style.width = `${30 + (attempts / maxAttempts) * 60}%`;
             }
-          } catch (err) {
-            console.error('Status check error:', err);
-            if (isStopped) break;
           }
-          
+
           attempts++;
         }
-        
+
         if (isStopped) {
           resetButtonStates();
           hideProgress();
           currentTaskId = null;
           return;
         }
-        
+
         if (attempts >= maxAttempts) {
-          throw new Error('Conversion timeout');
+          throw new Error('Conversion timed out after 30 minutes. Check the server console for details.');
         }
       } else {
         throw new Error('No task ID received');
       }
     } catch (err) {
-      showAlert('Error: ' + err.message, 'Error');
-      hideProgress();
+      showConversionError(err.message || String(err));
       resetButtonStates();
     } finally {
       currentTaskId = null;
@@ -582,6 +636,7 @@ if (youtubeForm) {
     
     const conversionTimeDisplay = document.getElementById('conversionTimeDisplay');
     if (conversionTimeDisplay) conversionTimeDisplay.style.display = 'none';
+    hideConversionError();
     showProgress();
     if (progressText) progressText.textContent = 'Starting conversion...';
     if (progressFill) progressFill.style.width = '10%';
@@ -603,31 +658,46 @@ if (youtubeForm) {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to start conversion');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to start conversion');
       }
-      
+
       const data = await response.json();
       currentTaskId = data.task_id;
-      
+
       let attempts = 0;
-      const maxAttempts = 300;
-      
+      const maxAttempts = 900; // 2s each — up to 30 min for long CPU conversions
+      let networkFailures = 0;
+
       while (!isStopped && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         if (isStopped) {
           break;
         }
-        
+
+        // Only network failures are retried here. Errors reported by the
+        // server are handled below, outside this try, so they surface
+        // immediately instead of being swallowed until the timeout.
+        let statusData = null;
         try {
           const statusResponse = await fetch(`/api/status/${currentTaskId}`);
-          const statusData = await statusResponse.json();
-          
+          statusData = await statusResponse.json();
+        } catch (err) {
+          console.error('Status check error:', err);
+          networkFailures++;
+          if (networkFailures >= 15) {
+            throw new Error('Lost connection to the server. Check that it is still running.');
+          }
+        }
+
+        if (statusData) {
+          networkFailures = 0;
           if (statusData.status === 'completed') {
             if (!isStopped) {
               progressFill.style.width = '100%';
               progressText.textContent = 'Done!';
-              
+
               setTimeout(function() {
                 hideProgress();
                 showConversionResult(statusData);
@@ -639,35 +709,31 @@ if (youtubeForm) {
             isStopped = true;
             progressText.textContent = 'Cancelled';
             break;
-          } else if (statusData.status === 'error') {
+          } else if (statusData.status === 'error' || (!statusData.status && statusData.error)) {
+            // Includes "Task not found" after a server restart
             throw new Error(statusData.error || 'Conversion failed');
-          } else {
-            if (!isStopped) {
-              progressText.textContent = statusData.progress || 'Processing...';
-              progressFill.style.width = `${60 + (attempts / maxAttempts) * 30}%`;
-            }
+          } else if (!isStopped) {
+            progressText.textContent = statusData.progress || 'Processing...';
+            progressFill.style.width = `${60 + (attempts / maxAttempts) * 30}%`;
           }
-        } catch (err) {
-          console.error('Status check error:', err);
-          if (isStopped) break;
         }
-        
+
         attempts++;
       }
-      
+
       if (isStopped) {
         resetButtonStates();
         hideProgress();
         currentTaskId = null;
         return;
       }
-      
+
       if (attempts >= maxAttempts) {
-        throw new Error('Conversion timeout');
+        throw new Error('Conversion timed out after 30 minutes. Check the server console for details.');
       }
     } catch (err) {
-      showAlert('Error: ' + err.message, 'Error');
-      hideProgress();
+      showConversionError(err.message || String(err));
+      resetButtonStates();
     } finally {
       currentTaskId = null;
     }

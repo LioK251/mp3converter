@@ -77,8 +77,12 @@ app.log
 *.out.log
 *.err.log
 cookies.txt
+cookies.txt.*
+!cookies.example.txt
+settings.json
 settings.local.json
 wallpapers/
+soundfonts/
 
 # Flask stuff:
 instance/
@@ -89,6 +93,26 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local tooling and generated project files
+.claude/
+.agents/
+.codex/
+assets/
+misc/
+transkun/
+skills-lock.json
+*.code-workspace
+start.bat
+templates/bg.heic
+templates/converter.webp
+templates/history.webp
+templates/icon.png
+templates/ray.js
+templates/sound.mp3
+
+# Local ML models (install Transkun from requirements.txt instead)
+resources/*.pth
 
 # Scrapy stuff:
 .scrapy

@@ -45,62 +45,81 @@ function color_for_chord(beat, difference) {
   return color;
 }
 
+// Break markers used in hand-written sheets on top of the generated ones:
+//   |        long break
+//   – / —    break (en/em dash, often pasted instead of "-")
+//   ....     section break, any run of 3+ dots
+const LONG_BREAK_CHARS = '|¦';
+const DASH_BREAK_CHARS = '–—‒―';
+
 function getColorFromSeparator(separatorStr) {
   if (!separatorStr) return tempoColors.long;
-  
-  if (separatorStr === '...... ') return tempoColors.quadruple;
-  if (separatorStr === '.... ') return tempoColors.whole;
-  if (separatorStr === '... ') return tempoColors.whole;
-  if (separatorStr === '...') return tempoColors.whole;
+
+  if (separatorStr[0] === '.') {
+    const dots = (separatorStr.match(/\./g) || []).length;
+    if (dots >= 5) return tempoColors.quadruple;
+    if (dots >= 4) return tempoColors.whole;
+    return tempoColors.whole;
+  }
+
+  if (LONG_BREAK_CHARS.includes(separatorStr[0])) return tempoColors.long;
+  if (DASH_BREAK_CHARS.includes(separatorStr[0])) return tempoColors.quarter;
+
   if (separatorStr === ', ') return tempoColors.half;
   if (separatorStr === ' - ') return tempoColors.quarter;
   if (separatorStr === ' ') return tempoColors.eighth;
   if (separatorStr === '-') return tempoColors.sixteenth;
-  
+
   return tempoColors.long;
 }
 
 function isSeparatorAt(text, pos) {
   if (pos >= text.length) return null;
-  
-  if (pos + 8 <= text.length && text.substring(pos, pos + 8) === '...... ') {
-    return { type: '...... ', len: 8 };
-  }
-  
-  if (pos + 5 <= text.length && text.substring(pos, pos + 5) === '.... ') {
-    return { type: '.... ', len: 5 };
-  }
-  
-  if (pos + 4 <= text.length && text.substring(pos, pos + 4) === '... ') {
-    return { type: '... ', len: 4 };
-  }
-  
-  if (pos + 3 <= text.length && text.substring(pos, pos + 3) === '...') {
-    if (pos + 4 > text.length || text[pos + 3] !== '.') {
-      if (pos + 3 >= text.length || text[pos + 3] === ' ') {
-        return { type: '...', len: 3 };
-      }
+
+  const ch = text[pos];
+
+  // Run of 3+ dots (with an optional trailing space) = section break
+  if (ch === '.') {
+    let dots = 0;
+    while (pos + dots < text.length && text[pos + dots] === '.') dots++;
+    if (dots >= 3) {
+      const trailingSpace = text[pos + dots] === ' ' ? 1 : 0;
+      return {
+        type: '.'.repeat(dots) + (trailingSpace ? ' ' : ''),
+        len: dots + trailingSpace,
+      };
     }
+    return null;
   }
-  
+
+  if (LONG_BREAK_CHARS.includes(ch)) {
+    const trailingSpace = text[pos + 1] === ' ' ? 1 : 0;
+    return { type: ch + (trailingSpace ? ' ' : ''), len: 1 + trailingSpace };
+  }
+
+  if (DASH_BREAK_CHARS.includes(ch)) {
+    const trailingSpace = text[pos + 1] === ' ' ? 1 : 0;
+    return { type: ch + (trailingSpace ? ' ' : ''), len: 1 + trailingSpace };
+  }
+
   if (pos + 3 <= text.length && text.substring(pos, pos + 3) === ' - ') {
     return { type: ' - ', len: 3 };
   }
-  
+
   if (pos + 2 <= text.length && text.substring(pos, pos + 2) === ', ') {
     return { type: ', ', len: 2 };
   }
-  
-  if (text[pos] === '-') {
+
+  if (ch === '-') {
     if (pos === 0 || text[pos - 1] !== ' ') {
       return { type: '-', len: 1 };
     }
   }
-  
-  if (text[pos] === ' ') {
+
+  if (ch === ' ') {
     return { type: ' ', len: 1 };
   }
-  
+
   return null;
 }
 
@@ -127,29 +146,37 @@ function colorizeTempoText(text) {
   let skipNextEmpty = false;
   
   for (const line of lines) {
-    if (line.trim().startsWith('Transpose by:')) {
+    const trimmed = line.trim();
+
+    if (/^transpose by\b/i.test(trimmed)) {
       result.push(escapeHtml(line) + '\n');
       skipNextEmpty = true;
       continue;
     }
-    
+
     if (skipNextEmpty && !line.trim()) {
       skipNextEmpty = false;
       continue;
     }
-    
+
     skipNextEmpty = false;
-    
+
     if (!line.trim()) {
       result.push('\n');
       continue;
     }
-    
-    if (line.trim().startsWith('<!--')) {
+
+    if (trimmed.startsWith('<!--')) {
       result.push(escapeHtml(line) + '\n');
       continue;
     }
-    
+
+    // Legend lines such as "| = long break" are prose, not notes
+    if (/\s=\s/.test(line)) {
+      result.push(escapeHtml(line) + '\n');
+      continue;
+    }
+
     const separators = [];
     let pos = 0;
     

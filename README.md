@@ -1,181 +1,153 @@
-# 🎵 MP3 → MIDI CONVERTER
+# MP3 to MIDI Converter
 
-Web application for converting audio/video files and supported media links to MIDI format using Transkun. Supports local uploads, YouTube, TikTok, and Discord CDN links, plus QWERTY sheet conversion and MIDI visualization.
+[![CI](https://github.com/LioK251/mp3converter/actions/workflows/ci.yml/badge.svg)](https://github.com/LioK251/mp3converter/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 
-## ✨ Features
+A local Flask application that converts audio, video, and supported media links to MIDI with [Transkun](https://github.com/Yujia-Yan/Transkun). It also includes QWERTY sheet conversion, conversion history, a browser MIDI library, and a piano visualizer.
 
-- Audio/video to MIDI conversion using Transkun
-- Local uploads plus YouTube, TikTok, and Discord CDN link support
-- QWERTY sheet converter with Auto and Multi transpose modes
-- GPU/CPU toggle with CUDA, MPS, and CPU fallback
-- MIDI upload, saved MIDI browser, and conversion history with delete functionality
-- Piano visualizer with SoundFont playback from `soundfonts/*.sf2`
-- Customizable settings, wallpaper backgrounds, and live preview
-  ![Converter Page](templates/converter.png)
-  ![History Page](templates/history.png)
+![Converter page](templates/converter.png)
 
-## 📋 Requirements
+## Features
 
-- **Python**: [3.10.0](https://www.python.org/downloads/release/python-3100/)
-- **FFmpeg**: [Required for audio processing](https://ffmpeg.org/download.html)
-- **Transkun**: [Required for audio-to-MIDI transcription](https://github.com/Yujia-Yan/Transkun)
-- **CUDA-capable GPU** (optional, CPU works too)
-- **SoundFont `.sf2` files** (optional, for piano visualizer playback)
+- Convert local audio and video files to MIDI.
+- Download and convert supported YouTube, TikTok, Discord CDN, and MuseScore links.
+- Use CUDA, Apple MPS, or CPU with automatic fallback.
+- Convert MIDI files to QWERTY sheets with transpose and quantization controls.
+- Browse conversion history and saved MIDI files.
+- Play MIDI files in the browser with optional local SoundFont files.
+- Run in a browser or in an optional PyWebView desktop window.
+- Optional Chromium extension for sending supported pages to the local app.
 
-## 🚀 Installation
+## Requirements
 
-### Step 1: Clone the Repository
+- Python 3.10 or newer.
+- [FFmpeg](https://ffmpeg.org/download.html) available on `PATH`.
+- A modern browser.
+- Optional: an NVIDIA CUDA setup or Apple Silicon for faster transcription.
+- Optional: one or more `.sf2` files for SoundFont playback.
+
+Transcription is compute-intensive. CPU mode works, but a compatible GPU is considerably faster.
+
+## Installation
 
 ```bash
-git clone <repository-url>
-cd audioconverter-web
+git clone https://github.com/LioK251/mp3converter.git
+cd mp3converter
+python -m venv .venv
 ```
 
-### Step 2: Install Python Dependencies
+Activate the virtual environment:
 
-Install all required packages, including PyTorch with CUDA support, in one go:
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
 
 ```bash
+# macOS or Linux
+source .venv/bin/activate
+```
+
+Install the Python dependencies:
+
+```bash
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-### Step 3: Install Transkun
+For a specific CUDA build, install the matching PyTorch packages from the [official PyTorch selector](https://pytorch.org/get-started/locally/) before installing `requirements.txt`. Keep `torch`, `torchvision`, and `torchaudio` on the same index and release channel.
 
-`requirements.txt` installs Transkun. The app uses the `transkun` command when available and falls back to the Python module. Verify at least one of these works:
-
-```bash
-transkun --help
-python -m transkun.transcribe --help
-```
-
-If neither command works, follow the [Transkun installation guide](https://github.com/Yujia-Yan/Transkun).
-
-### Step 4: Install FFmpeg
-
-FFmpeg is required for audio processing. Install based on your operating system:
-
-**Windows:**
-
-- Download from [FFmpeg official website](https://ffmpeg.org/download.html)
-- Extract and add to your system PATH
-- Or use: `choco install ffmpeg` (if using Chocolatey)
-
-**Linux:**
+Verify the external tools:
 
 ```bash
-sudo apt-get update
-sudo apt-get install ffmpeg
-```
-
-**macOS:**
-
-```bash
-brew install ffmpeg
-```
-
-### Step 5: Configure YouTube Cookies (Optional)
-
-For downloading restricted or age-restricted YouTube videos, add your YouTube cookies to `cookies.txt`:
-
-1. Install a browser extension to export cookies:
-   - Chrome/Edge: [get NETSCAPE cookies by export](https://chromewebstore.google.com/detail/hlkenndednhfkekhgcdicdfddnkalmdm?utm_source=item-share-cb)
-   - Firefox: [get NETSCAPE cookies by export](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/)
-
-2. Export cookies from YouTube and save to `cookies.txt` in the project root directory
-
-**Note:** Cookies expire after some time. If downloads start failing, re-export and update your `cookies.txt` file.
-
-### Step 6: Verify Installation
-
-Run a quick test to ensure everything is set up correctly:
-
-```bash
-python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
-python -c "import transkun, pretty_midi, yt_dlp; print('Python dependencies OK')"
 ffmpeg -version
+python -c "import torch, transkun, yt_dlp; print('Dependencies OK'); print('CUDA:', torch.cuda.is_available())"
 ```
 
-## 💻 Usage
+## Usage
 
-Run the application:
+Start the browser version:
 
 ```bash
 python app.py
 ```
 
-Or for GUI mode:
+Start the optional desktop window:
 
 ```bash
 python app_gui.py
 ```
 
-Helper launchers are also included:
+The Windows launchers `run.bat` and `run_app.bat` perform the same actions. macOS launchers are provided as `run.command` and `run_app.command`.
 
-- `run.bat` / `run.command` - browser mode
-- `run_app.bat` / `run_app.command` - desktop window mode
+By default, the server is available at `http://127.0.0.1:5000`.
 
-- Toggle GPU/CPU mode before converting
-- Upload audio/video files or paste YouTube/TikTok/Discord links
-- Convert MIDI to QWERTY sheets with customizable settings
-- Switch between Auto and Multi transpose modes in the sheet viewer
-- Open saved MIDI files in the piano visualizer and choose a SoundFont
+## Optional local files
 
-## ⚙️ Configuration
+These files are deliberately excluded from Git because they contain user data, credentials, third-party media, or very large binaries:
+
+- `cookies.txt` — optional Netscape-format cookies used by yt-dlp.
+- `soundfonts/*.sf2` — local SoundFont files for the piano visualizer.
+- `wallpapers/` — custom image or video backgrounds.
+- `uploads/`, `converted/`, `history.json`, `settings.json`, `instance/` — runtime data.
+
+Create an empty cookies file from the safe template only if you need it:
+
+```powershell
+Copy-Item cookies.example.txt cookies.txt
+```
+
+```bash
+cp cookies.example.txt cookies.txt
+```
+
+Never commit real browser cookies. If they were ever published, revoke the affected sessions and rotate the cookies.
+
+The piano visualizer works without a SoundFont selection, but local SoundFont playback requires placing a legally distributable `.sf2` file in `soundfonts/`.
+
+## Browser extension
+
+The optional extension lives in `extension/` and expects the application at `http://127.0.0.1:5000`.
+
+1. Open `chrome://extensions` (or the equivalent page in a Chromium browser).
+2. Enable Developer mode.
+3. Choose **Load unpacked** and select the `extension` directory.
+
+## Configuration
 
 Environment variables:
 
-- `SECRET_KEY` - Flask secret key (auto-generated)
-- `UPLOAD_FOLDER` - Upload directory (default: `uploads`)
-- `CONVERTED_FOLDER` - Output directory (default: `converted`)
-- `FORCE_HTTPS` - Force HTTPS (default: `false`)
+- `SECRET_KEY` — Flask session secret. A random value is generated for local use when omitted.
+- `UPLOAD_FOLDER` — upload directory; defaults to `uploads`.
+- `CONVERTED_FOLDER` — output directory; defaults to `converted`.
+- `FORCE_HTTPS` — enable HTTPS-oriented security headers and secure cookies when set to `1`, `true`, or `yes`.
+- `HOST` — bind address; defaults to `127.0.0.1`.
+- `PORT` — bind port; defaults to `5000`.
 
-Local files and folders:
+## Security and privacy
 
-- `settings.json` - Saved UI, sheet, color, and wallpaper settings
-- `cookies.txt` - Optional YouTube cookies in Netscape format
-- `soundfonts/` - `.sf2` files used by the piano visualizer
-- `wallpapers/` - Image/video backgrounds listed in the settings modal
+- The project is designed primarily as a local application. Do not expose the Flask development server directly to the public internet.
+- Media URLs and uploaded files may be sent to third-party services named in those URLs.
+- Review the terms of service and copyright rules applicable to media you download or convert.
+- Local cookies, conversion history, uploads, settings, logs, wallpapers, and SoundFonts are ignored by Git.
 
-## 🔌 API Endpoints
+## Development checks
 
-- `POST /api/convert` - Start URL conversion: `{"media_url": "...", "device": "gpu"|"cuda"|"mps"|"cpu"|null}`
-- `GET /api/status/<task_id>` - Check conversion status
-- `POST /api/stop/<task_id>` - Cancel conversion
-- `POST /api/convert-to-sheets` - Convert MIDI to sheets: `{"midi_filename": "...", "settings": {...}}`
-- `POST /api/upload-media` - Upload audio/video file for MIDI conversion
-- `POST /api/upload-midi` - Upload existing `.mid` or `.midi` file
-- `GET /api/midi-files` - List saved MIDI files
-- `GET /api/history` - Get history (query: `limit`)
-- `POST /api/history/delete` - Delete history item: `{"timestamp": <float>}`
-- `GET /api/settings` - Get saved settings
-- `POST /api/settings` - Save settings JSON
-- `GET /api/soundfonts` - List available `.sf2` files
-- `GET /api/wallpapers` - List available image/video wallpapers
-- `GET /api/midi/<filename>` - Serve a converted MIDI file
-- `GET /api/health` - Health check
-- `GET /history.json` - Raw history JSON
+The GitHub Actions workflow runs lightweight checks that do not download PyTorch or execute a transcription model:
 
-## 🐛 Troubleshooting
+```bash
+python -m compileall -q app.py app_gui.py console_ui.py midi_to_sheets.py utils
+python -m unittest discover -s tests -v
+```
 
-- **Transkun not found**: Install and add to PATH
-- **CUDA/MPS not available**: App works on CPU and auto-falls back if acceleration is unavailable
-- **FFmpeg not found**: Install and add to PATH
-- **Download failed**: Check connection, URL validity, or use cookies.txt for YouTube
-- **Visualizer has no sound**: Add at least one `.sf2` SoundFont file to `soundfonts/`
+## License
 
-## 🙏 Credits
+The application source is released under the [MIT License](LICENSE). Bundled or user-supplied media, models, SoundFonts, wallpapers, and third-party libraries remain subject to their own licenses.
 
-- **QWERTY Sheet Converter**: Based on [midi-converter](https://github.com/ArijanJ/midi-converter) by [@ArijanJ](https://github.com/ArijanJ) and [@Albacusphetical](https://github.com/Albacusphetical)
-- **Transkun**: [Audio-to-MIDI transcription](https://github.com/Yujia-Yan/Transkun)
-- **FFmpeg**: Audio/video decoding and format conversion
-- **yt-dlp**: YouTube, TikTok, and media link downloading
-- **PyTorch**: CUDA, MPS, and CPU tensor runtime used by Transkun
-- **Flask, Werkzeug, Flask-WTF, and Flask-Talisman**: Web server, forms, CSRF handling, and security headers
-- **pretty-midi and SciPy**: MIDI processing and timing utilities
-- **Requests**: HTTP requests and metadata downloads
-- **pywebview and pywin32**: Optional desktop window mode and Windows integration
-- **Tailwind CSS**: Frontend utility styling
-- **@tonejs/midi**: Browser-side MIDI parsing for the piano visualizer
-- **js-synthesizer and FluidSynth**: SoundFont-based MIDI playback in the piano visualizer
-- **SoundFont and wallpaper creators**: Local files in `soundfonts/` and `wallpapers/` belong to their respective creators and licenses
-- **Open-source maintainers**: Additional direct and transitive dependencies are listed in `requirements.txt` and `package-lock.json`
+## Credits
+
+- [Transkun](https://github.com/Yujia-Yan/Transkun) for audio-to-MIDI transcription.
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) and FFmpeg for media download and processing.
+- [midi-converter](https://github.com/ArijanJ/midi-converter) for the QWERTY sheet-conversion foundation.
+- Flask, PyTorch, pretty-midi, SciPy, Tone.js MIDI, and js-synthesizer contributors.

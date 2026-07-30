@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "AudioConverter - YouTube/TikTok/MuseScore to MIDI",
+  "version": "1.1.0",
+  "description": "Конвертируйте YouTube и TikTok видео в MIDI с помощью Transkun и скачивайте MIDI с MuseScore прямо в приложение",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:5000/*",
+    "https://www.youtube.com/*",
+    "https://youtube.com/*",
+    "https://youtu.be/*",
+    "https://www.tiktok.com/*",
+    "https://tiktok.com/*",
+    "https://vm.tiktok.com/*",
+    "https://vt.tiktok.com/*",
+    "https://musescore.com/*",
+    "https://*.musescore.com/*",
+    "file:///*"
+  ],
+  "action": {
+    "default_title": "Open AudioConverter",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://youtube.com/*",
+        "https://youtu.be/*",
+        "https://www.tiktok.com/*",
+        "https://tiktok.com/*",
+        "https://vm.tiktok.com/*",
+        "https://vt.tiktok.com/*"
+      ],
+      "js": ["glass-button.js", "youtube.js"]
+    },
+    {
+      "matches": [
+        "https://musescore.com/*",
+        "https://*.musescore.com/*"
+      ],
+      "js": ["glass-button.js", "md5.js", "musescore.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

@@ -1,3 +1,15 @@
+// Escape untrusted values (video titles, URLs, filenames) before inserting
+// them into innerHTML anywhere in the app. Loaded first, so global here.
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+window.escapeHtml = escapeHtml;
+
 function showModal(title, message, options = {}) {
   const modal = document.getElementById('custom-modal');
   const modalTitle = document.getElementById('modal-title');

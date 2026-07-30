@@ -17,7 +17,7 @@ else
   exit 1
 fi
 
-echo "MP3 -> MIDI Converter"
+echo "MP3 -> MIDI Converter (desktop mode)"
 echo "Project: $SCRIPT_DIR"
 echo "Python:  $PYTHON"
 echo
@@ -25,12 +25,6 @@ echo
 if ! command -v ffmpeg >/dev/null 2>&1; then
   echo "Warning: ffmpeg was not found in PATH."
   echo "Install it with: brew install ffmpeg"
-  echo
-fi
-
-if ! command -v transkun >/dev/null 2>&1; then
-  echo "Warning: transkun was not found in PATH."
-  echo "Conversions may fail until Transkun is installed and available."
   echo
 fi
 

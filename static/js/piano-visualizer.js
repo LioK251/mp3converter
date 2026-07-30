@@ -34,6 +34,7 @@
   let startTimeFallback = 0;  // performance.now()/1000 fallback
 
   // Extracted MIDI data
+  let maxNoteDuration = 0;    // longest single note, for windowed render lookup
   let allNotes = [];          // [{start, end, releaseEnd, midi, velocity, channel, track}] sorted by start
   let allCCEvents = [];       // [{time, ch, cc, value}]                         sorted by time
   let pitchBendEvents = [];   // [{time, ch, value}]                             sorted by time
@@ -68,6 +69,38 @@
   const sfSelect      = document.getElementById('pv-soundfont-select');
 
   if (!modal || !canvas) return;
+
+  // ─── Lazy loading of heavy CDN libraries ─────────────────────────────
+  // @tonejs/midi + libfluidsynth WASM (~2 MB) are only needed when the
+  // visualizer is actually opened, so they are injected on first use
+  // instead of blocking the initial page load.
+  const CDN_LIBS = [
+    'https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js',
+    'https://cdn.jsdelivr.net/npm/js-synthesizer@1.8.5/externals/libfluidsynth-2.3.0.js',
+    'https://cdn.jsdelivr.net/npm/js-synthesizer@1.8.5/dist/js-synthesizer.js',
+  ];
+  let libsPromise = null;
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('Failed to load ' + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  function ensureLibsLoaded() {
+    if (!libsPromise) {
+      // libfluidsynth must be loaded before js-synthesizer — keep order
+      libsPromise = CDN_LIBS.reduce(
+        (chain, src) => chain.then(() => loadScript(src)),
+        Promise.resolve()
+      ).catch(err => { libsPromise = null; throw err; });
+    }
+    return libsPromise;
+  }
 
   // ─── Helpers ─────────────────────────────────────────────────────────
   function formatTime(s) {
@@ -402,7 +435,11 @@
     allNotes.sort((a, b) => a.start - b.start);
     allCCEvents.sort((a, b) => a.time - b.time);
     pitchBendEvents.sort((a, b) => a.time - b.time);
-    allNotes.forEach(note => { totalDuration = Math.max(totalDuration, note.releaseEnd); });
+    maxNoteDuration = 0;
+    allNotes.forEach(note => {
+      totalDuration = Math.max(totalDuration, note.releaseEnd);
+      maxNoteDuration = Math.max(maxNoteDuration, note.end - note.start);
+    });
 
     // Always render a full 88-key piano, from A0 to C8.
     minNote = PIANO_MIN_NOTE;
@@ -655,8 +692,66 @@
     [132, 204, 22],  // lime
   ];
 
+  // Cached background gradient (rebuilt only when canvas size changes)
+  let bgGradient = null;
+  let bgGradientKey = '';
+
+  // Spark particles rising from active keys
+  const MAX_PARTICLES = 150;
+  const particles = [];
+  let lastFrameTs = 0;
+
+  function lowerBoundByStart(value) {
+    let lo = 0, hi = allNotes.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (allNotes[mid].start < value) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+
+  function spawnParticles(kl, col, velocity, playheadY, dt) {
+    if (particles.length >= MAX_PARTICLES) return;
+    let count = (10 + velocity * 35) * dt;
+    while (count > 0 && particles.length < MAX_PARTICLES) {
+      if (count < 1 && Math.random() > count) break;
+      particles.push({
+        x: kl.x + Math.random() * kl.width,
+        y: playheadY - Math.random() * 3,
+        vx: (Math.random() - 0.5) * 20,
+        vy: -(35 + Math.random() * 75) * (0.6 + velocity * 0.8),
+        life: 1,
+        decay: 1.1 + Math.random() * 1.5,
+        size: 1 + Math.random() * 2,
+        col,
+      });
+      count -= 1;
+    }
+  }
+
+  function updateAndDrawParticles(dt) {
+    if (particles.length === 0) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    let w = 0;
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.life -= p.decay * dt;
+      if (p.life <= 0) continue;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      ctx.fillStyle = `rgba(${p.col[0]},${p.col[1]},${p.col[2]},${p.life * 0.85})`;
+      ctx.fillRect(p.x, p.y, p.size, p.size);
+      particles[w++] = p;
+    }
+    particles.length = w;
+    ctx.restore();
+  }
+
   function startRenderLoop() {
     if (animFrameId) return;
+    lastFrameTs = performance.now();
     function frame() { animFrameId = requestAnimationFrame(frame); renderFrame(); }
     frame();
   }
@@ -668,18 +763,30 @@
     const H = canvasCssHeight;
     if (W <= 0 || H <= 0) return;
 
+    const now = performance.now();
+    const dt = clamp((now - lastFrameTs) / 1000, 0, 0.05);
+    lastFrameTs = now;
+
     const PPS          = 200;   // pixels per second (vertical scroll speed)
     const CORNER       = 3;
-    const BG           = '#0a0e17';
     const PIANO_HEIGHT = Math.min(120, Math.max(60, H * 0.18));
     const BK_RATIO     = 0.63;
     const playheadY    = H - PIANO_HEIGHT;
     const noteAreaH    = playheadY;
 
     const t = currentPlayTime();
+    const animating = isPlaying && !isPaused;
 
-    // ── Clear ──
-    ctx.fillStyle = BG;
+    // ── Background (cached vertical gradient) ──
+    const gradKey = W + 'x' + H;
+    if (!bgGradient || bgGradientKey !== gradKey) {
+      bgGradient = ctx.createLinearGradient(0, 0, 0, H);
+      bgGradient.addColorStop(0,   '#131a2e');
+      bgGradient.addColorStop(0.55, '#0a0e17');
+      bgGradient.addColorStop(1,   '#05070d');
+      bgGradientKey = gradKey;
+    }
+    ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, W, H);
 
     // ── Vertical octave grid lines ──
@@ -694,76 +801,95 @@
       }
     }
 
-    // ── Collect active notes this frame ──
-    const activeKeys = {};
-    for (let i = 0; i < allNotes.length; i++) {
-      const n = allNotes[i];
-      if (t >= n.start && t <= n.end) {
-        const col = TRACK_COLORS[n.track % TRACK_COLORS.length];
-        const prev = activeKeys[n.midi];
-        if (!prev || n.velocity > prev.velocity) {
-          activeKeys[n.midi] = { col, velocity: n.velocity };
-        }
-      }
-    }
-
-    // ── Falling notes ──
+    // ── Falling notes + active keys (single windowed pass) ──
     // Show the full note area ahead so notes are visible before they play
     const viewStart = t - (noteAreaH / PPS);      // past notes (just scrolled off)
     const viewEnd   = t + (noteAreaH / PPS) + 0.2; // future notes filling canvas top
+    const activeKeys = {};
 
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 0, W, playheadY); ctx.clip();
 
-    for (let i = 0; i < allNotes.length; i++) {
+    // allNotes is sorted by start: begin at the first note that could still
+    // overlap the window and stop as soon as starts pass the window end.
+    const iFrom = lowerBoundByStart(viewStart - maxNoteDuration);
+    for (let i = iFrom; i < allNotes.length; i++) {
       const note = allNotes[i];
+      if (note.start > viewEnd) break;
       // Draw the physical MIDI note only. Sustain is shown on the keyboard
       // highlight below; stretching every note rectangle creates stacked tails.
-      if (note.end < viewStart || note.start > viewEnd) continue;
+      if (note.end < viewStart) continue;
       const kl = pianoKeyLayout[note.midi];
       if (!kl) continue;
+
+      const col      = TRACK_COLORS[note.track % TRACK_COLORS.length];
+      const isActive = t >= note.start && t <= note.end;
+      if (isActive) {
+        const prev = activeKeys[note.midi];
+        if (!prev || note.velocity > prev.velocity) {
+          activeKeys[note.midi] = { col, velocity: note.velocity };
+        }
+      }
 
       const botY = playheadY - (note.start - t) * PPS;
       const topY = playheadY - (note.end   - t) * PPS;
       const nh   = Math.max(3, botY - topY);
       const nx   = kl.x + 1;
       const nw   = Math.max(2, kl.width - 2);
+      const alpha = 0.4 + note.velocity * 0.6;
+      const rounded = CORNER > 0 && nw > CORNER * 2 && nh > CORNER * 2;
 
-      const col      = TRACK_COLORS[note.track % TRACK_COLORS.length];
-      const alpha    = 0.4 + note.velocity * 0.6;
-      const isActive = t >= note.start && t <= note.end;
-
-      if (isActive) { ctx.shadowColor = `rgba(${col},0.6)`; ctx.shadowBlur = 12; }
+      if (isActive) {
+        ctx.shadowColor = `rgba(${col[0]},${col[1]},${col[2]},0.7)`;
+        ctx.shadowBlur = 14;
+      }
       ctx.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha})`;
-      if (CORNER > 0 && nw > CORNER * 2 && nh > CORNER * 2) {
+      if (rounded) {
         ctx.beginPath(); ctx.roundRect(nx, topY, nw, nh, CORNER); ctx.fill();
       } else {
         ctx.fillRect(nx, topY, nw, nh);
       }
+      // subtle top edge highlight for depth
+      ctx.fillStyle = `rgba(255,255,255,${0.10 + note.velocity * 0.12})`;
+      ctx.fillRect(nx + 1, topY + 1, nw - 2, Math.min(3, nh * 0.25));
       if (isActive) {
-        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},0.9)`;
+        ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},0.95)`;
         ctx.lineWidth = 1.5;
-        if (CORNER > 0 && nw > CORNER * 2 && nh > CORNER * 2) {
+        if (rounded) {
           ctx.beginPath(); ctx.roundRect(nx, topY, nw, nh, CORNER); ctx.stroke();
         } else {
           ctx.strokeRect(nx, topY, nw, nh);
         }
+        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+        if (animating) spawnParticles(kl, col, note.velocity, playheadY, dt);
       }
-      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
     }
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+
+    // ── Particles (drawn inside the note-area clip) ──
+    updateAndDrawParticles(dt);
     ctx.restore();
 
-    // ── Horizontal playhead ──
+    // ── Playhead glow band + line ──
+    const glow = ctx.createLinearGradient(0, playheadY - 26, 0, playheadY);
+    glow.addColorStop(0, 'rgba(168,85,247,0)');
+    glow.addColorStop(1, 'rgba(168,85,247,0.22)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, playheadY - 26, W, 26);
     ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 2;
-    ctx.shadowColor = '#a855f7'; ctx.shadowBlur  = 8;
+    ctx.shadowColor = '#a855f7'; ctx.shadowBlur  = 10;
     ctx.beginPath(); ctx.moveTo(0, playheadY); ctx.lineTo(W, playheadY); ctx.stroke();
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
 
     // ── Piano keyboard — white keys ──
+    const whiteGrad = ctx.createLinearGradient(0, playheadY, 0, playheadY + PIANO_HEIGHT);
+    whiteGrad.addColorStop(0, '#ffffff');
+    whiteGrad.addColorStop(0.85, '#e8e8ea');
+    whiteGrad.addColorStop(1, '#cfcfd4');
     for (let n = minNote; n <= maxNote; n++) {
       const kl = pianoKeyLayout[n];
       if (!kl || kl.isBlack) continue;
-      ctx.fillStyle = '#f0f0f0';
+      ctx.fillStyle = whiteGrad;
       ctx.fillRect(kl.x, playheadY, kl.width, PIANO_HEIGHT);
       ctx.strokeStyle = '#b0b0b0'; ctx.lineWidth = 1;
       ctx.strokeRect(kl.x, playheadY, kl.width, PIANO_HEIGHT);
@@ -780,17 +906,26 @@
       }
     }
 
+    // ── Red felt strip + shadow under the keybed (classic piano look) ──
+    ctx.fillStyle = '#7f1d3a';
+    ctx.fillRect(0, playheadY, W, 3);
+    const bedShadow = ctx.createLinearGradient(0, playheadY + 3, 0, playheadY + 12);
+    bedShadow.addColorStop(0, 'rgba(0,0,0,0.35)');
+    bedShadow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = bedShadow;
+    ctx.fillRect(0, playheadY + 3, W, 9);
+
     // ── Piano keyboard — black keys ──
+    const bkh = PIANO_HEIGHT * BK_RATIO;
+    const blackGrad = ctx.createLinearGradient(0, playheadY, 0, playheadY + bkh);
+    blackGrad.addColorStop(0, '#3a3a3e');
+    blackGrad.addColorStop(0.15, '#1a1a1a');
+    blackGrad.addColorStop(1, '#0c0c0e');
     for (let n = minNote; n <= maxNote; n++) {
       const kl = pianoKeyLayout[n];
       if (!kl || !kl.isBlack) continue;
-      const bkh = PIANO_HEIGHT * BK_RATIO;
-      ctx.fillStyle = '#1a1a1a';
+      ctx.fillStyle = blackGrad;
       ctx.fillRect(kl.x, playheadY, kl.width, bkh);
-      // subtle top highlight
-      const g = ctx.createLinearGradient(kl.x, playheadY, kl.x, playheadY + bkh);
-      g.addColorStop(0, 'rgba(80,80,80,0.35)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g; ctx.fillRect(kl.x, playheadY, kl.width, bkh);
       ctx.strokeStyle = '#080808'; ctx.lineWidth = 1;
       ctx.strokeRect(kl.x, playheadY, kl.width, bkh);
       if (activeKeys[n]) {
@@ -828,6 +963,9 @@
     showLoading('Initializing...', 0);
 
     try {
+      showLoading('Loading libraries...', 2);
+      await ensureLibsLoaded();
+
       if (sfSelect && !sfSelect.value) await loadSoundFontList();
 
       await loadMidi(midiFilename);

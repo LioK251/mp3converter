@@ -1,4 +1,6 @@
 let currentMidiFilename = null;
+// Set while a plain .txt sheet is shown: it has no MIDI to re-transpose from
+let currentSheetTextFilename = null;
 let transposeMode = localStorage.getItem('transposeMode') || 'auto';
 
 const transposeModeToggle = document.getElementById('transpose-mode-toggle');
@@ -36,7 +38,7 @@ if (transposeModeToggle) {
     localStorage.setItem('transposeMode', transposeMode);
     updateTransposeModeButton();
     
-    if (currentMidiFilename) {
+    if (currentMidiFilename && !currentSheetTextFilename) {
       const modal = document.getElementById('view-tempo-modal');
       if (modal && !modal.classList.contains('hidden')) {
         viewTempoText(currentMidiFilename);
@@ -73,7 +75,87 @@ if (copyTransposesBtn) {
   });
 }
 
+// Open a plain .txt sheet from the converted folder in the same modal the MIDI
+// sheets use, so hand-written sheets get the tempo colouring too.
+window.viewSheetFile = async function(sheetFilename, title = null) {
+  const modal = document.getElementById('view-tempo-modal');
+  const content = document.getElementById('tempo-text-content');
+  const titleElement = document.getElementById('tempo-modal-title');
+
+  if (!modal || !content) {
+    console.error('Sheet modal elements not found');
+    return;
+  }
+
+  currentMidiFilename = null;
+  currentSheetTextFilename = sheetFilename;
+
+  if (titleElement) {
+    let displayTitle = title || sheetFilename;
+    displayTitle = displayTitle
+      .replace(/\.txt$/i, '')
+      .replace(/_(sheets|qwerty)$/i, '')
+      .replace(/_/g, ' ')
+      .replace(/\btranskun\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    titleElement.textContent = displayTitle;
+  }
+
+  requestAnimationFrame(() => {
+    content.textContent = '';
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'text-center text-gray-400';
+    loadingDiv.textContent = 'Loading sheet text...';
+    content.appendChild(loadingDiv);
+
+    modal.classList.remove('hidden');
+    modal.style.opacity = '0';
+    modal.style.transition = 'opacity 0.15s ease-in';
+  });
+
+  try {
+    const response = await fetch('/api/sheet-content?filename=' + encodeURIComponent(sheetFilename));
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+
+    let text = data.content || '';
+    if (data.truncated) {
+      text += '\n\n[file truncated]';
+    }
+
+    const coloredText = colorizeTempoText(text);
+    const centerSettings = await loadSheetsSettings();
+
+    requestAnimationFrame(() => {
+      content.innerHTML = coloredText;
+
+      if (centerSettings.center_sheet_text) {
+        content.classList.add('text-center');
+      } else {
+        content.classList.remove('text-center');
+      }
+
+      requestAnimationFrame(() => { modal.style.opacity = '1'; });
+    });
+  } catch (error) {
+    requestAnimationFrame(() => {
+      content.textContent = '';
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'text-center text-red-400';
+      errorDiv.textContent = `Error: ${error.message}`;
+      content.appendChild(errorDiv);
+
+      requestAnimationFrame(() => { modal.style.opacity = '1'; });
+    });
+  }
+};
+
 window.viewTempoText = async function(midiFilename, title = null) {
+  currentSheetTextFilename = null;
   const modal = document.getElementById('view-tempo-modal');
   const content = document.getElementById('tempo-text-content');
   const titleElement = document.getElementById('tempo-modal-title');
@@ -188,6 +270,7 @@ function clearSheetsContent() {
       content.className = 'flex-1 overflow-y-auto overflow-x-hidden small-scrollbar bg-gray-900 rounded p-1 font-mono text-sm text-gray-200 border border-gray-700 leading-relaxed pt-8 pr-2';
     }
     currentMidiFilename = null;
+    currentSheetTextFilename = null;
   });
 }
 

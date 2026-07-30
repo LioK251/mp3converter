@@ -28,12 +28,6 @@ if ! command -v ffmpeg >/dev/null 2>&1; then
   echo
 fi
 
-if ! command -v transkun >/dev/null 2>&1; then
-  echo "Warning: transkun was not found in PATH."
-  echo "Conversions may fail until Transkun is installed and available."
-  echo
-fi
-
 "$PYTHON" "$SCRIPT_DIR/app.py"
 EXIT_CODE=$?
 

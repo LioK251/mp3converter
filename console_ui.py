@@ -74,19 +74,33 @@ def clear_console() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
+def safe_print(text: str) -> None:
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        try:
+            if hasattr(sys.stdout, "buffer"):
+                sys.stdout.buffer.write((text + "\n").encode("utf-8", errors="replace"))
+                sys.stdout.buffer.flush()
+            else:
+                print(text.encode("utf-8", errors="replace").decode("utf-8"))
+        except Exception:
+            pass
+
+
 def print_banner(subtitle: str = "", clear: bool = True) -> None:
     enable_ansi()
     if clear and os.environ.get("AUDIO_CONSOLE_CLEAR", "1") != "0":
         clear_console()
 
     width = shutil.get_terminal_size((96, 24)).columns
-    print()
+    safe_print("")
     for line in BANNER.strip("\n").splitlines():
-        print(paint(line.center(width), PINK, "1"))
+        safe_print(paint(line.center(width), PINK, "1"))
 
     if subtitle:
-        print(paint(subtitle.center(width), PINK_DIM))
-    print(paint(("-" * min(width, 96)).center(width), PINK_DIM))
+        safe_print(paint(subtitle.center(width), PINK_DIM))
+    safe_print(paint(("-" * min(width, 96)).center(width), PINK_DIM))
 
 
 class PrettyConsoleFormatter(logging.Formatter):

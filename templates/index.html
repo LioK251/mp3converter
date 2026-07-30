@@ -2,11 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <link rel="icon" href="/templates/icon.ico" type="image/x-icon">
     <title>MP3 → MIDI Converter</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="/static/css/piano-visualizer.css">
+    <link rel="stylesheet" href="/static/css/style.css?v={{ asset_version('/static/css/style.css') }}">
+    <link rel="stylesheet" href="/static/css/piano-visualizer.css?v={{ asset_version('/static/css/piano-visualizer.css') }}">
   </head>
   <body class="text-gray-200 min-h-screen flex items-center justify-center">
     <video id="background-video" autoplay loop muted playsinline preload="none" style="display: none;"></video>
@@ -41,7 +43,7 @@
         <div id="drop-zone" class="main-card bg-gray-800/80 backdrop-blur-md p-8 rounded-2xl shadow-lg text-center w-full border border-gray-700 hover-effect" style="position: relative; align-self: flex-start;">
           <h2 class="text-xl font-semibold text-white">MP3 → MIDI CONVERTER</h2>
 
-          <div class="flex items-center justify-center space-x-4 mb-4">
+          <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-4">
             <span class="text-white text-sm">Model: Transkun</span>
             <div class="flex items-center space-x-2">
               <span class="text-gray-400 text-xs">CPU</span>
@@ -126,6 +128,8 @@
                           <span class="px-2 py-0.5 text-[10px] rounded-full bg-purple-600/30 text-purple-200 border border-purple-700">TikTok</span>
                         {% elif item.type == 'discord' %}
                           <span class="px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">Discord</span>
+                        {% elif item.type == 'musescore' %}
+                          <span class="px-2 py-0.5 text-[10px] rounded-full bg-sky-600/30 text-sky-300 border border-sky-700">MuseScore</span>
                         {% else %}
                           <span class="px-2 py-0.5 text-[10px] rounded-full bg-indigo-600/30 text-indigo-300 border border-indigo-700">MP3</span>
                         {% endif %}
@@ -201,14 +205,33 @@
                           </a>
                         </div>
                     
+                      {% elif item.type == 'musescore' %}
+                        {% if item.thumbnail_url and item.thumbnail_url.strip() %}
+                          <a href="{{ item.musescore_url }}" target="_blank" rel="noopener" class="block hover-effect">
+                            <img src="{{ item.thumbnail_url }}"
+                                alt="score"
+                                loading="lazy"
+                                style="width:100%; max-height: 180px; object-fit:cover; border-radius:0.5rem; border:1px solid #374151;"
+                                onerror="this.onerror=null; this.src='/templates/notfound.jpg'; this.style.borderRadius='0.5rem';" />
+                          </a>
+                        {% else %}
+                          <div class="block hover-effect">
+                            <img src="/templates/notfound.jpg" alt="score" loading="lazy" class="w-full rounded-lg border border-gray-700" style="max-height: 180px; object-fit: cover;" />
+                          </div>
+                        {% endif %}
+                        <div class="text-gray-300" title="{{ item.video_title }}">
+                          <a class="underline hover-effect" href="{{ item.musescore_url }}" target="_blank" rel="noopener">
+                            {{ item.video_title or item.musescore_url }}
+                          </a>
+                        </div>
+
                       {% else %}
                         <div class="block hover-effect">
                           <img src="/templates/notfound.jpg" alt="thumb" loading="lazy" class="w-full rounded-lg border border-gray-700" style="max-height: 180px; object-fit: cover;" />
                         </div>
                         <div class="text-gray-300">File:
-                          {% if item.mp3_name %}
-                            <a class="underline hover-effect" href="{{ url_for('serve_upload', filename=item.mp3_name) }}" target="_blank" rel="noopener">{{ item.mp3_name }}</a>
-                          {% else %}—{% endif %}
+                          {# Plain text: the source MP3 is deleted after conversion, so a link would 404 #}
+                          {% if item.mp3_name %}<span class="break-all">{{ item.mp3_name }}</span>{% else %}—{% endif %}
                         </div>
                       {% endif %}
                     
@@ -266,6 +289,8 @@
           <div id="full-history-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[65vh] overflow-y-auto small-scrollbar items-stretch">
             <div class="text-center text-gray-400 py-6 col-span-full text-sm">Loading history...</div>
           </div>
+
+          <div id="history-pagination" class="history-pagination mt-3"></div>
         </div>
       </div>
       
@@ -708,20 +733,17 @@
       </div>
     </div>
 
-    <script src="/static/js/modal.js"></script>
-    <script src="/static/js/device.js"></script>
-    <script src="/static/js/settings.js"></script>
-    <script src="/static/js/sheets-utils.js"></script>
-    <script src="/static/js/history.js"></script>
+    <script src="/static/js/modal.js?v={{ asset_version('/static/js/modal.js') }}"></script>
+    <script src="/static/js/device.js?v={{ asset_version('/static/js/device.js') }}"></script>
+    <script src="/static/js/settings.js?v={{ asset_version('/static/js/settings.js') }}"></script>
+    <script src="/static/js/sheets-utils.js?v={{ asset_version('/static/js/sheets-utils.js') }}"></script>
+    <script src="/static/js/history.js?v={{ asset_version('/static/js/history.js') }}"></script>
 
-    <script src="/static/js/conversion.js"></script>
-    <script src="/static/js/sheets-viewer.js"></script>
-    <script src="/static/js/midis.js"></script>
-    <script src="/static/js/ui.js"></script>
+    <script src="/static/js/conversion.js?v={{ asset_version('/static/js/conversion.js') }}"></script>
+    <script src="/static/js/sheets-viewer.js?v={{ asset_version('/static/js/sheets-viewer.js') }}"></script>
+    <script src="/static/js/midis.js?v={{ asset_version('/static/js/midis.js') }}"></script>
+    <script src="/static/js/ui.js?v={{ asset_version('/static/js/ui.js') }}"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/js-synthesizer@1.8.5/externals/libfluidsynth-2.3.0.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/js-synthesizer@1.8.5/dist/js-synthesizer.js"></script>
-    <script src="/static/js/piano-visualizer.js"></script>
+    <script src="/static/js/piano-visualizer.js?v={{ asset_version('/static/js/piano-visualizer.js') }}"></script>
   </body>
 </html>
