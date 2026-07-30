@@ -1,6 +1,5 @@
 # MP3 to MIDI Converter
 
-[![CI](https://github.com/LioK251/mp3converter/actions/workflows/ci.yml/badge.svg)](https://github.com/LioK251/mp3converter/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 
@@ -131,15 +130,6 @@ Environment variables:
 - Media URLs and uploaded files may be sent to third-party services named in those URLs.
 - Review the terms of service and copyright rules applicable to media you download or convert.
 - Local cookies, conversion history, uploads, settings, logs, wallpapers, and SoundFonts are ignored by Git.
-
-## Development checks
-
-The GitHub Actions workflow runs lightweight checks that do not download PyTorch or execute a transcription model:
-
-```bash
-python -m compileall -q app.py app_gui.py console_ui.py midi_to_sheets.py utils
-python -m unittest discover -s tests -v
-```
 
 ## License
 

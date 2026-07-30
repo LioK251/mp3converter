@@ -9,4 +9,4 @@ All notable changes to this project are documented in this file.
 - Added the optional Chromium extension for YouTube, TikTok, and MuseScore pages.
 - Refreshed dependency constraints for current yt-dlp, Flask, PyTorch, and desktop-window support.
 - Removed credentials, runtime data, user media, and oversized local binaries from the Git release set.
-- Added release documentation, a safe cookie template, smoke tests, and GitHub Actions CI.
+- Added release documentation and a safe cookie template.
